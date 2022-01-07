@@ -11,6 +11,15 @@
 // Eigen
 #include <eigen3/Eigen/Dense>
 
+// Sensors
+#include "state_estimation/sensors/mavros_odometry.h"
+
+/**
+ * @brief State Observer Class. Implements an EKF to calculate an estimation of
+ * the drone state and external disturbances
+ * TODO: Add mutexes to make sure that the inputs/states won't change while they
+ * are being used
+ */
 class StateObserver {
  public:
   StateObserver(ros::NodeHandle &nh);
@@ -42,9 +51,11 @@ class StateObserver {
    */
   void predict(ros::Time pred_time);
 
-  /** @brief Gets the F matrix using the latest state and inputs
+  /** @brief Updates the P_pred_mat for the prediction step
+   * @param dt Time step for prediction
+   * @param cmd The input for the prediction step
    */
-  void getFmat();
+  void updatePpred(const double &dt, const Eigen::Vector4d &cmd);
 
   /**
    * @brief Gets the rotation matrix from the Euler angles
@@ -53,7 +64,8 @@ class StateObserver {
    * @param roll Roll angle
    * @returns Rotation matrix
    */
-  Eigen::Matrix3d eulerToRotMat(double yaw, double pitch, double roll);
+  Eigen::Matrix3d yprToRotMat(const double &yaw, const double &pitch,
+                              const double &roll);
 
   // Observer data
   ros::Time past_state_time;
@@ -74,7 +86,12 @@ class StateObserver {
 
   // Model parameters
   Eigen::Vector3d gravity_vector;
-  Eigen::Matrix3d dampening_matrix;
+  Eigen::Matrix3d damping_matrix;
   double t_pitch, k_pitch, t_roll, k_roll;
+  double damp_x, damp_y, damp_z;
   double k_thrust;
+  double gravity;
+
+  // Sensors
+  MavrosOdometry *odom_sensor;
 };

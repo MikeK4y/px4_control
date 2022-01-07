@@ -5,9 +5,9 @@ t_roll: 0.15
 k_roll: 1.02
 
 # Dampening coefficients
-dampening_x: -0.38
-dampening_y: -0.38
-dampening_z: -0.10
+damping_x: -0.38
+damping_y: -0.38
+damping_z: -0.10
 
 # Thrust coefficient
 k_thrust: 13.74
