@@ -300,9 +300,11 @@ void StateObserver::publishState(ros::Time time) {
   msg.velocity.y = state(4, 0);
   msg.velocity.z = state(5, 0);
   // Attitude
-  msg.pose.orientation.x = state(6, 0);
-  msg.pose.orientation.y = state(7, 0);
-  msg.pose.orientation.z = state(8, 0);
+  tf::Quaternion q;
+  geometry_msgs::Quaternion q_msg;
+  q.setRPY(state(6, 0), state(7, 0), state(8, 0));
+  tf::quaternionTFToMsg(q, q_msg);
+  msg.pose.orientation = q_msg;
   // Disturbances
   msg.disturbances.x = state(9, 0);
   msg.disturbances.y = state(10, 0);
