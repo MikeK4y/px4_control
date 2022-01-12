@@ -121,8 +121,9 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
         msg.pose.pose.position.z, msg.twist.twist.linear.x,
         msg.twist.twist.linear.y, msg.twist.twist.linear.z, y, p, r;
 
-    // Run prediction
+    // Run prediction and update time
     predict(msg.header.stamp);
+    past_state_time = msg.header.stamp;
 
     // Run correction
     Eigen::MatrixXd H_mat(9, 12);
@@ -169,13 +170,8 @@ void StateObserver::ctrlCallback(const mavros_msgs::AttitudeTarget &msg) {
 void StateObserver::predict(ros::Time pred_time) {
   // Find input for the prediction time step
   double dt = (pred_time - past_state_time).toSec();
-  double dt_p = 0.0;
-  double dt_l = (pred_time - latest_cmd_time).toSec();
-
-  if (dt_l < dt)
-    dt_p = dt - dt_l;
-  else if (dt_l > dt)
-    dt_l = dt;
+  double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
+  double dt_p = dt_l < dt ? dt - dt_l : 0.0;
 
   Eigen::Vector4d cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
 
@@ -204,6 +200,10 @@ void StateObserver::predict(ros::Time pred_time) {
   state_pred(6) = state(6) + dt * cmd(0);
   state_pred(7) = state(7) + (dt * (k_pitch * cmd(1) - state(7))) / t_pitch;
   state_pred(8) = state(8) + (dt * (k_roll * cmd(2) - state(8))) / t_roll;
+
+  state_pred(9) = state(9);
+  state_pred(10) = state(10);
+  state_pred(11) = state(11);
 
   // Update P_pred
   updatePpred(dt, cmd);
@@ -302,7 +302,7 @@ void StateObserver::publishState(ros::Time time) {
   // Attitude
   tf::Quaternion q;
   geometry_msgs::Quaternion q_msg;
-  q.setRPY(state(6, 0), state(7, 0), state(8, 0));
+  q.setRPY(state(8, 0), state(7, 0), state(6, 0));
   tf::quaternionTFToMsg(q, q_msg);
   msg.pose.orientation = q_msg;
   // Disturbances
