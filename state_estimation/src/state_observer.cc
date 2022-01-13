@@ -169,6 +169,8 @@ void StateObserver::ctrlCallback(const mavros_msgs::AttitudeTarget &msg) {
 
 void StateObserver::predict(ros::Time pred_time) {
   // Find input for the prediction time step
+  /** TODO: Doesn't work as I was expecting. In the test bag files the cmds
+   * appear first but have a timestamp after the odometry's*/
   double dt = (pred_time - past_state_time).toSec();
   double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
   double dt_p = dt_l < dt ? dt - dt_l : 0.0;
