@@ -1,2 +1,15 @@
-model_identification/data/*
+# Directories
 .vscode
+model_identification/data/*
+
+# Python
+__pycache__
+*.pyc
+
+# C++
+*.o
+*.so
+
+# Acados generated
+nmpc/scripts/c_generated_code
+nmpc/scripts/acados_ocp.json
