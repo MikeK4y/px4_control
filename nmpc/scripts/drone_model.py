@@ -3,6 +3,9 @@ from casadi import SX, vertcat, sin, cos
 
 
 def drone_model():
+    """
+      Defines the parameters and dynamics of the drone model
+    """
 
     model_name = 'drone_w_disturbances'
 
@@ -39,7 +42,7 @@ def drone_model():
     fdy = SX.sym('fdy')  # Disturbance force y
     fdz = SX.sym('fdz')  # Disturbance force z
     kth = SX.sym('kth')  # Thrust coefficients
-    g = SX.sym('g')  # Gravity
+    g = SX.sym('g')      # Gravity
     p = vertcat(tp, kp,
                 tr, kr,
                 dx, dy, dz,
@@ -64,8 +67,10 @@ def drone_model():
     dpx = vx
     dpy = vy
     dpz = vz
-    dvx = dx * vx + (cos(qz)*sin(qy)*cos(qx) - sin(qz)*sin(qx)) * kth * u4 + fdx
-    dvy = dy * vy + (sin(qz)*sin(qy)*cos(qx) - cos(qz)*sin(qx)) * kth * u4 + fdy
+    dvx = dx * vx + (cos(qz)*sin(qy)*cos(qx) -
+                     sin(qz)*sin(qx)) * kth * u4 + fdx
+    dvy = dy * vy + (sin(qz)*sin(qy)*cos(qx) -
+                     cos(qz)*sin(qx)) * kth * u4 + fdy
     dvz = dz * vz + (cos(qy)*cos(qx)) * kth * u4 + g + fdz
     dqx = (kr * u3 - qx) / tr
     dqy = (kp * u2 - qy) / tp

@@ -5,6 +5,7 @@
 #include "geometry_msgs/Vector3.h"
 #include "tf/transform_datatypes.h"
 
+namespace px4_ctrl {
 StateObserver::StateObserver(ros::NodeHandle &nh) {
   // Setup Subscribers
   odom_sub = nh.subscribe("/mavros/local_position/odom", 1,
@@ -332,3 +333,4 @@ num StateObserver::clipValue(const num &value, const num &l_bound,
 
   return clipped_value;
 }
+}  // namespace px4_ctrl

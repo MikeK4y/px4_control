@@ -6,7 +6,7 @@
 // ROS messages
 #include <mavros_msgs/AttitudeTarget.h>
 #include <nav_msgs/Odometry.h>
-#include <state_estimation/DroneState.h>
+#include "state_estimation/DroneState.h"
 
 // Eigen
 #include <eigen3/Eigen/Dense>
@@ -20,6 +20,7 @@
  * TODO: Add mutexes to make sure that the inputs/states won't change while they
  * are being used
  */
+namespace px4_ctrl {
 class StateObserver {
  public:
   StateObserver(ros::NodeHandle &nh);
@@ -125,3 +126,4 @@ class StateObserver {
   // Sensors
   MavrosOdometry *odom_sensor;
 };
+}  // namespace px4_ctrl
