@@ -1,0 +1,5 @@
+<launch>
+  <node name="px4_nmpc_node" pkg="nmpc" type="px4_nmpc_node" output="screen" required="true">
+    <rosparam command="load" file="$(find state_estimation)/cfg/model_parameters.yaml"/>
+  </node>
+</launch>

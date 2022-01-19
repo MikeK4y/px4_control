@@ -18,6 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(DIRECTORY msg
   FILES
   DroneState.msg
+  Setpoint.msg
+  Trajectory.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

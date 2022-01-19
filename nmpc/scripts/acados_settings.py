@@ -114,6 +114,7 @@ def acados_settings(Tf, N):
     ocp.solver_options.integrator_type = 'ERK'
 
     # Path to acados include and lib directories
+    # Uncomment if you want to build generated c code
     # ocp.acados_include_path = '../../acados/include'
     # ocp.acados_lib_path = '../../acados/lib'
 

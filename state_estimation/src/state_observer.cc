@@ -308,6 +308,7 @@ void StateObserver::publishState(ros::Time time) {
   q.setRPY(state(8, 0), state(7, 0), state(6, 0));
   tf::quaternionTFToMsg(q, q_msg);
   msg.pose.orientation = q_msg;
+  msg.heading.data = state(6,0);
   // Disturbances
   msg.disturbances.x = state(9, 0);
   msg.disturbances.y = state(10, 0);

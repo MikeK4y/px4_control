@@ -31,10 +31,10 @@ def drone_model():
     u = vertcat(u1, u2, u3, u4)
 
     # Model parameters
-    tp = SX.sym('tp')    # Roll
-    kp = SX.sym('kp')    # Roll
-    tr = SX.sym('tr')    # Pitch
-    kr = SX.sym('kr')    # Pitch
+    tp = SX.sym('tp')    # Roll time constant
+    kp = SX.sym('kp')    # Roll gain
+    tr = SX.sym('tr')    # Pitch time constant
+    kr = SX.sym('kr')    # Pitch gain
     dx = SX.sym('dx')    # Damping x
     dy = SX.sym('dy')    # Damping y
     dz = SX.sym('dz')    # Damping z
