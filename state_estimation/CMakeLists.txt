@@ -8,27 +8,10 @@ add_compile_options(-std=c++14)
 # Dependencies #
 ################
 find_package(catkin REQUIRED COMPONENTS
-  message_generation
   roscpp
   std_msgs
   geometry_msgs
-)
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## Generate messages in the 'msg' folder
-add_message_files(DIRECTORY msg
-  FILES
-  DroneState.msg
-)
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
+  px4_control_msgs
 )
 
 ###################################
@@ -38,7 +21,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES state_estimation
-  CATKIN_DEPENDS message_generation message_runtime roscpp std_msgs geometry_msgs
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs px4_control_msgs
 )
 
 ###########
@@ -55,7 +38,6 @@ add_executable(state_observer_node
 )
 
 add_dependencies(state_observer_node
-  state_estimation_generate_messages_cpp
   ${catkin_EXPORTED_TARGETS}
 )
 

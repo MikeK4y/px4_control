@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   geometry_msgs
-  state_estimation
+  px4_control_msgs
 )
 
 # Acados
@@ -29,7 +29,7 @@ set(nmpc_generated_LIBRARIES "${PROJECT_SOURCE_DIR}/scripts/c_generated_code/lib
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES nmpc
-  CATKIN_DEPENDS roscpp std_msgs state_estimation
+  CATKIN_DEPENDS roscpp std_msgs px4_control_msgs
 )
 
 ###########

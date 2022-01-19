@@ -14,7 +14,7 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
                           &StateObserver::ctrlCallback, this);
 
   // Setup Publisher
-  state_pub = nh.advertise<state_estimation::DroneState>("/drone_state", 1);
+  state_pub = nh.advertise<px4_control_msgs::DroneState>("/drone_state", 1);
 
   // Initialize Sensors
   /** TODO: Load R along with the other parameters */
@@ -290,7 +290,7 @@ void StateObserver::updateState() {
 }
 
 void StateObserver::publishState(ros::Time time) {
-  state_estimation::DroneState msg;
+  px4_control_msgs::DroneState msg;
 
   // Header
   msg.header.stamp = time;

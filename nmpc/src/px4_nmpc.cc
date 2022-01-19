@@ -17,6 +17,6 @@ Px4Nmpc::Px4Nmpc(ros::NodeHandle &nh) {
 
 Px4Nmpc::~Px4Nmpc() {}
 
-void Px4Nmpc::droneStateCallback(const state_estimation::DroneState &msg) {}
+void Px4Nmpc::droneStateCallback(const px4_control_msgs::DroneState &msg) {}
 void Px4Nmpc::setpointCallback(const geometry_msgs::Pose &msg) {}
 }  // namespace px4_ctrl

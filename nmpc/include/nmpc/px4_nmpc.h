@@ -12,7 +12,7 @@
 
 // ROS messages
 #include <geometry_msgs/Pose.h>
-#include "state_estimation/DroneState.h"
+#include "px4_control_msgs/DroneState.h"
 
 /**
  * @brief PX4 Nonlinear Model Predictive Controller. Uses c code generated from
@@ -34,7 +34,7 @@ class Px4Nmpc {
   ros::Publisher control_pub;
 
   // Callbacks
-  void droneStateCallback(const state_estimation::DroneState &msg);
+  void droneStateCallback(const px4_control_msgs::DroneState &msg);
   void setpointCallback(const geometry_msgs::Pose &msg);
 };
 }  // namespace px4_ctrl
