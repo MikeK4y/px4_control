@@ -132,15 +132,57 @@ bool Px4Nmpc::initializeAcadosSolver() {
 void Px4Nmpc::testAcados() {
   // Initial conditions
   double x_init[DRONE_W_DISTURBANCES_NX];
-  x_init[0] = 0.0;  // Position x
-  x_init[1] = 0.0;  // Position y
-  x_init[2] = 0.0;  // Position z
+  x_init[0] = 0.5;  // Position x
+  x_init[1] = 0.5;  // Position y
+  x_init[2] = 1.0;  // Position z
   x_init[3] = 0.0;  // Velocity x
   x_init[4] = 0.0;  // Velocity y
   x_init[5] = 0.0;  // Velocity z
   x_init[6] = 0.0;  // Roll
   x_init[7] = 0.0;  // Pitch
   x_init[8] = 0.0;  // Yaw
+
+  double lbx0[DRONE_W_DISTURBANCES_NBX0];
+  double ubx0[DRONE_W_DISTURBANCES_NBX0];
+  lbx0[0] = 0.5;
+  ubx0[0] = 0.5;
+  lbx0[1] = 0.5;
+  ubx0[1] = 0.5;
+  lbx0[2] = 1.0;
+  ubx0[2] = 1.0;
+  lbx0[3] = 0;
+  ubx0[3] = 0;
+  lbx0[4] = 0;
+  ubx0[4] = 0;
+  lbx0[5] = 0;
+  ubx0[5] = 0;
+  lbx0[6] = 0;
+  ubx0[6] = 0;
+  lbx0[7] = 0;
+  ubx0[7] = 0;
+  lbx0[8] = 0;
+  ubx0[8] = 0;
+
+  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", lbx0);
+  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", ubx0);
+
+  double W[DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY];
+  W[0 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e6;    // Position x
+  W[1 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e6;    // Position y
+  W[2 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e6;    // Position z
+  W[3 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e0;    // Velocity x
+  W[4 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e0;    // Velocity y
+  W[5 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e0;    // Velocity z
+  W[6 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-3;   // Roll
+  W[7 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-3;   // Pitch
+  W[8 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-3;   // Yaw
+  W[9 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-6;   // Yaw rate
+  W[10 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-6;  // Pitch cmd
+  W[11 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-6;  // Roll cmd
+  W[12 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-6;  // Thrust
+
+  for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "W", W);
 
   // Initial input
   double u_init[DRONE_W_DISTURBANCES_NU];
@@ -153,21 +195,49 @@ void Px4Nmpc::testAcados() {
   ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", u_init);
 
   // Setpoint
-  double x_desired[DRONE_W_DISTURBANCES_NX];
-  x_desired[0] = 0.0;  // Position x
-  x_desired[1] = 0.0;  // Position y
-  x_desired[2] = 0.0;  // Position z
-  x_desired[3] = 0.0;  // Velocity x
-  x_desired[4] = 0.0;  // Velocity y
-  x_desired[5] = 0.0;  // Velocity z
-  x_desired[6] = 0.0;  // Roll
-  x_desired[7] = 0.0;  // Pitch
-  x_desired[8] = 0.0;  // Yaw
+  double y_ref[DRONE_W_DISTURBANCES_NY];
+  y_ref[0] = 0.0;   // Position x
+  y_ref[1] = 0.0;   // Position y
+  y_ref[2] = 1.0;   // Position z
+  y_ref[3] = 0.0;   // Velocity x
+  y_ref[4] = 0.0;   // Velocity y
+  y_ref[5] = 0.0;   // Velocity z
+  y_ref[6] = 0.0;   // Roll
+  y_ref[7] = 0.0;   // Pitch
+  y_ref[8] = 0.0;   // Yaw
+  y_ref[9] = 0.0;   // Yaw rate
+  y_ref[10] = 0.0;  // Pitch cmd
+  y_ref[11] = 0.0;  // Roll cmd
+  y_ref[12] = 0.0;  // Thrust
 
-  for (int i = 1; i < DRONE_W_DISTURBANCES_N; i++) {
-    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", x_desired);
-    ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "u", u_init);
+  double y_ref_e[DRONE_W_DISTURBANCES_NYN];
+  y_ref_e[0] = 0.0;  // Position x
+  y_ref_e[1] = 0.0;  // Position y
+  y_ref_e[2] = 1.0;  // Position z
+  y_ref_e[3] = 0.0;  // Velocity x
+  y_ref_e[4] = 0.0;  // Velocity y
+  y_ref_e[5] = 0.0;  // Velocity z
+  y_ref_e[6] = 0.0;  // Roll
+  y_ref_e[7] = 0.0;  // Pitch
+  y_ref_e[8] = 0.0;  // Yaw
+  // double x_desired[DRONE_W_DISTURBANCES_NX];
+  // x_desired[0] = 0.0;  // Position x
+  // x_desired[1] = 0.0;  // Position y
+  // x_desired[2] = 1.0;  // Position z
+  // x_desired[3] = 0.0;  // Velocity x
+  // x_desired[4] = 0.0;  // Velocity y
+  // x_desired[5] = 0.0;  // Velocity z
+  // x_desired[6] = 0.0;  // Roll
+  // x_desired[7] = 0.0;  // Pitch
+  // x_desired[8] = 0.0;  // Yaw
+
+  for (int i = 0; i < DRONE_W_DISTURBANCES_N - 1; i++) {
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "yref", y_ref);
+    // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", x_desired);
+    // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "u", u_init);
   }
+  ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
+                         "yref", y_ref_e);
 
   // solve ocp in loop ???
   int rti_phase = 0;

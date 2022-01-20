@@ -74,6 +74,8 @@ def drone_model():
     dvz = dz * vz + (cos(qy)*cos(qx)) * kth * u4 + g + fdz
     dqx = (kr * u3 - qx) / tr
     dqy = (kp * u2 - qy) / tp
+    # dqx = cos(qz) * ((kr * u3 - qx) / tr) - sin(qz) * ((kp * u2 - qy) / tp)
+    # dqy = sin(qz) * ((kr * u3 - qx) / tr) + cos(qz) * ((kp * u2 - qy) / tp)
     dqz = u1
 
     f_expl = vertcat(dpx, dpy, dpz,
