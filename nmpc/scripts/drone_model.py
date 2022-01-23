@@ -1,5 +1,5 @@
 from acados_template import AcadosModel
-from casadi import SX, vertcat, sin, cos
+from casadi import SX, SX, vertcat, sin, cos
 
 
 def drone_model():
@@ -67,15 +67,11 @@ def drone_model():
     dpx = vx
     dpy = vy
     dpz = vz
-    dvx = dx * vx + (cos(qz)*sin(qy)*cos(qx) -
-                     sin(qz)*sin(qx)) * kth * u4 + fdx
-    dvy = dy * vy + (sin(qz)*sin(qy)*cos(qx) -
-                     cos(qz)*sin(qx)) * kth * u4 + fdy
+    dvx = dx * vx + (cos(qz)*sin(qy)*cos(qx) + sin(qz)*sin(qx)) * kth * u4 + fdx
+    dvy = dy * vy + (sin(qz)*sin(qy)*cos(qx) - cos(qz)*sin(qx)) * kth * u4 + fdy
     dvz = dz * vz + (cos(qy)*cos(qx)) * kth * u4 + g + fdz
     dqx = (kr * u3 - qx) / tr
     dqy = (kp * u2 - qy) / tp
-    # dqx = cos(qz) * ((kr * u3 - qx) / tr) - sin(qz) * ((kp * u2 - qy) / tp)
-    # dqy = sin(qz) * ((kr * u3 - qx) / tr) + cos(qz) * ((kp * u2 - qy) / tp)
     dqz = u1
 
     f_expl = vertcat(dpx, dpy, dpz,

@@ -117,10 +117,16 @@ def acados_settings(Tf, N):
 
     # OCP options
     ocp.solver_options.tf = Tf
+    # PARTIAL_CONDENSING_HPIPM
+    # PARTIAL_CONDENSING_OSQP
+    # PARTIAL_CONDENSING_QPDUNES
+    # FULL_CONDENSING_HPIPM
+    # FULL_CONDENSING_QPOASES
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-    ocp.solver_options.nlp_solver_type = 'SQP_RTI'
+    ocp.solver_options.nlp_solver_type = 'SQP'
     ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
     ocp.solver_options.integrator_type = 'ERK'
+    # ocp.solver_options.nlp_solver_max_iter = 1000
 
     # Path to acados include and lib directories
     # Uncomment if you want to build generated c code
@@ -132,5 +138,5 @@ def acados_settings(Tf, N):
     return model, acados_solver
 
 
-acados_settings(3, 20)
+acados_settings(2, 40)
 print("Acados NMPC generated")
