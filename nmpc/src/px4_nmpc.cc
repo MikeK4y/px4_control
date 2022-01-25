@@ -24,7 +24,10 @@ Px4Nmpc::Px4Nmpc(ros::NodeHandle &nh) {
     ROS_ERROR("Failed to initialize Acados solver. Exiting\n");
     exit(1);
   }
-  testAcados();
+
+  // Clear trajectory
+  current_reference_trajectory.clear();
+  trajectory_index = 0;
 }
 
 Px4Nmpc::~Px4Nmpc() {
@@ -196,65 +199,109 @@ void Px4Nmpc::testAcados() {
     ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, ii, "u",
                     &utraj[ii * DRONE_W_DISTURBANCES_NU]);
 
-  if (status == ACADOS_SUCCESS) {
-    printf("Time to solve ocp: %f [ms]\n", min_time * 1000);
+  // if (status == ACADOS_SUCCESS) {
+  //   printf("Time to solve ocp: %f [ms]\n", min_time * 1000);
 
-    printf("\n--- xtraj ---\n");
-    d_print_exp_tran_mat(DRONE_W_DISTURBANCES_NX, DRONE_W_DISTURBANCES_N + 1,
-                         xtraj, DRONE_W_DISTURBANCES_NX);
-    printf("\n--- utraj ---\n");
-    d_print_exp_tran_mat(DRONE_W_DISTURBANCES_NU, DRONE_W_DISTURBANCES_N, utraj,
-                         DRONE_W_DISTURBANCES_NU);
-  } else {
-    printf("drone_w_disturbances_acados_solve() failed with status %d.\n",
-           status);
-  }
+  //   printf("\n--- xtraj ---\n");
+  //   d_print_exp_tran_mat(DRONE_W_DISTURBANCES_NX, DRONE_W_DISTURBANCES_N + 1,
+  //                        xtraj, DRONE_W_DISTURBANCES_NX);
+  //   printf("\n--- utraj ---\n");
+  //   d_print_exp_tran_mat(DRONE_W_DISTURBANCES_NU, DRONE_W_DISTURBANCES_N,
+  //   utraj,
+  //                        DRONE_W_DISTURBANCES_NU);
+  // } else {
+  //   printf("drone_w_disturbances_acados_solve() failed with status %d.\n",
+  //          status);
+  // }
 }
 
 void Px4Nmpc::droneStateCallback(const px4_control_msgs::DroneState &msg) {}
-void Px4Nmpc::setpointCallback(const px4_control_msgs::Setpoint &msg) {}
-void Px4Nmpc::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {}
+void Px4Nmpc::setpointCallback(const px4_control_msgs::Setpoint &msg) {
+  // Clear old trajectory
+  current_reference_trajectory.clear();
+  trajectory_index = 0;
 
-void Px4Nmpc::setReference(const std::vector<setpoint> &reference) {
+  trajectory_setpoint setpoint;
+  setpoint.pos_x = msg.position.x;
+  setpoint.pos_y = msg.position.y;
+  setpoint.pos_z = msg.position.z;
+  setpoint.vel_x = msg.velocity.x;
+  setpoint.vel_y = msg.velocity.y;
+  setpoint.vel_z = msg.velocity.z;
+  setpoint.q_roll = msg.orientation.x;
+  setpoint.q_pitch = msg.orientation.y;
+  setpoint.q_yaw = msg.orientation.z;
 
-  int ref_size = reference.size();
+  current_reference_trajectory.push_back(setpoint);
+}
 
+void Px4Nmpc::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
+  // Clear old trajectory
+  current_reference_trajectory.clear();
+  trajectory_index = 0;
 
-    // Setpoint
-  double y_ref[DRONE_W_DISTURBANCES_NY];
-  y_ref[0] = 0.1;   // Position x
-  y_ref[1] = 0.0;   // Position y
-  y_ref[2] = 1.0;   // Position z
-  y_ref[3] = 0.0;   // Velocity x
-  y_ref[4] = 0.0;   // Velocity y
-  y_ref[5] = 0.0;   // Velocity z
-  y_ref[6] = 0.0;   // Roll
-  y_ref[7] = 0.0;   // Pitch
-  y_ref[8] = 0.0;   // Yaw
-  y_ref[9] = 0.0;   // Yaw rate
-  y_ref[10] = 0.0;  // Pitch cmd
-  y_ref[11] = 0.0;  // Roll cmd
-  y_ref[12] = 0.0;  // Thrust
+  trajectory_setpoint setpoint;
+  for (size_t i = 0; i < msg.trajectory.size(); i++) {
+    setpoint.pos_x = msg.trajectory[i].position.x;
+    setpoint.pos_y = msg.trajectory[i].position.y;
+    setpoint.pos_z = msg.trajectory[i].position.z;
+    setpoint.vel_x = msg.trajectory[i].velocity.x;
+    setpoint.vel_y = msg.trajectory[i].velocity.y;
+    setpoint.vel_z = msg.trajectory[i].velocity.z;
+    setpoint.q_roll = msg.trajectory[i].orientation.x;
+    setpoint.q_pitch = msg.trajectory[i].orientation.y;
+    setpoint.q_yaw = msg.trajectory[i].orientation.z;
 
-  double y_ref_e[DRONE_W_DISTURBANCES_NYN];
-  y_ref_e[0] = 0.1;  // Position x
-  y_ref_e[1] = 0.0;  // Position y
-  y_ref_e[2] = 1.0;  // Position z
-  y_ref_e[3] = 0.0;  // Velocity x
-  y_ref_e[4] = 0.0;  // Velocity y
-  y_ref_e[5] = 0.0;  // Velocity z
-  y_ref_e[6] = 0.0;  // Roll
-  y_ref_e[7] = 0.0;  // Pitch
-  y_ref_e[8] = 0.0;  // Yaw
-
-    for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++) {
-    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "yref", y_ref);
+    current_reference_trajectory.push_back(setpoint);
   }
+}
+
+void Px4Nmpc::setReference() {
+  int ref_size = current_reference_trajectory.size();
+  int ref_index = trajectory_index;
+  int acados_index = 0;
+
+  // Trajectory
+  while (acados_index < DRONE_W_DISTURBANCES_N) {
+    double y_ref[DRONE_W_DISTURBANCES_NY];
+    y_ref[0] = current_reference_trajectory[ref_index].pos_x;    // Position x
+    y_ref[1] = current_reference_trajectory[ref_index].pos_y;    // Position y
+    y_ref[2] = current_reference_trajectory[ref_index].pos_z;    // Position z
+    y_ref[3] = current_reference_trajectory[ref_index].vel_x;    // Velocity x
+    y_ref[4] = current_reference_trajectory[ref_index].vel_y;    // Velocity y
+    y_ref[5] = current_reference_trajectory[ref_index].vel_z;    // Velocity z
+    y_ref[6] = current_reference_trajectory[ref_index].q_roll;   // Roll
+    y_ref[7] = current_reference_trajectory[ref_index].q_pitch;  // Pitch
+    y_ref[8] = current_reference_trajectory[ref_index].q_yaw;    // Yaw
+    y_ref[9] = 0.0;                                              // Yaw rate
+    y_ref[10] = 0.0;                                             // Pitch cmd
+    y_ref[11] = 0.0;                                             // Roll cmd
+    y_ref[12] = 0.0;                                             // Thrust
+
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, acados_index, "yref",
+                           y_ref);
+
+    acados_index++;
+    ref_index = ref_index + 1 < ref_size ? ref_index + 1 : ref_index;
+  }
+
+  // End point
+  double y_ref_e[DRONE_W_DISTURBANCES_NYN];
+  y_ref_e[0] = current_reference_trajectory[ref_index].pos_x;    // Position x
+  y_ref_e[1] = current_reference_trajectory[ref_index].pos_y;    // Position y
+  y_ref_e[2] = current_reference_trajectory[ref_index].pos_z;    // Position z
+  y_ref_e[3] = current_reference_trajectory[ref_index].vel_x;    // Velocity x
+  y_ref_e[4] = current_reference_trajectory[ref_index].vel_y;    // Velocity y
+  y_ref_e[5] = current_reference_trajectory[ref_index].vel_z;    // Velocity z
+  y_ref_e[6] = current_reference_trajectory[ref_index].q_roll;   // Roll
+  y_ref_e[7] = current_reference_trajectory[ref_index].q_pitch;  // Pitch
+  y_ref_e[8] = current_reference_trajectory[ref_index].q_yaw;    // Yaw
+
   ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
                          "yref", y_ref_e);
 }
 
-void Px4Nmpc::setInitialConditions(const setpoint &state_init) {
+void Px4Nmpc::setInitialConditions(const trajectory_setpoint &state_init) {
   double x_init[DRONE_W_DISTURBANCES_NBX0];
   x_init[0] = state_init.pos_x;
   x_init[1] = state_init.pos_y;

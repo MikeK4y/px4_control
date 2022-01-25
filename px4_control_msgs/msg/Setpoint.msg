@@ -1,3 +1,3 @@
 geometry_msgs/Vector3 position
 geometry_msgs/Vector3 velocity
-std_msgs/Float64 heading
+geometry_msgs/Vector3 orientation

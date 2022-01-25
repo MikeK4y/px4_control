@@ -21,7 +21,7 @@
  */
 namespace px4_ctrl {
 
-struct setpoint {
+struct trajectory_setpoint {
   double pos_x;
   double pos_y;
   double pos_z;
@@ -70,6 +70,8 @@ class Px4Nmpc {
   ocp_nlp_solver *nlp_solver;
   void *nlp_opts;
   double *model_parameters;
+  std::vector<trajectory_setpoint> current_reference_trajectory;
+  int trajectory_index;
 
   /**
    * @brief Initializes acados solver
@@ -83,13 +85,13 @@ class Px4Nmpc {
    * vector's size is smaller than the discretization steps, the last value is
    * repeated until all steps are filled
    */
-  void setReference(const std::vector<setpoint> &reference);
+  void setReference();
 
   /**
    * @brief Sets the initial conditions for acados
    * @param state_init Initial state of the drone contained in a setpoint struct
    */
-  void setInitialConditions(const setpoint &state_init);
+  void setInitialConditions(const trajectory_setpoint &state_init);
 
   /**
    * @brief Updates the disturbances
