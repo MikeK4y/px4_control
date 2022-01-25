@@ -20,6 +20,19 @@
  * acados for the nmpc
  */
 namespace px4_ctrl {
+
+struct setpoint {
+  double pos_x;
+  double pos_y;
+  double pos_z;
+  double vel_x;
+  double vel_y;
+  double vel_z;
+  double q_roll;
+  double q_pitch;
+  double q_yaw;
+};
+
 class Px4Nmpc {
  public:
   Px4Nmpc(ros::NodeHandle &nh);
@@ -63,6 +76,29 @@ class Px4Nmpc {
    * @returns True if successful
    */
   bool initializeAcadosSolver();
+
+  /**
+   * @brief Sets the reference trajectory
+   * @param reference Vector that contains the reference trajectory. If the
+   * vector's size is smaller than the discretization steps, the last value is
+   * repeated until all steps are filled
+   */
+  void setReference(const std::vector<setpoint> &reference);
+
+  /**
+   * @brief Sets the initial conditions for acados
+   * @param state_init Initial state of the drone contained in a setpoint struct
+   */
+  void setInitialConditions(const setpoint &state_init);
+
+  /**
+   * @brief Updates the disturbances
+   * @param fdis_x Disturbance on x axis
+   * @param fdis_y Disturbance on y axis
+   * @param fdis_z Disturbance on z axis
+   */
+  void updateDisturbances(const double &fdis_x, const double &fdis_y,
+                          const double &fdis_z);
 
   /**
    * @brief Just for testing the acados solver

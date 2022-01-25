@@ -3,18 +3,6 @@
 #include <mavros_msgs/AttitudeTarget.h>
 
 namespace px4_ctrl {
-
-void d_print_exp_tran_mat(int row, int col, double *A, int lda) {
-  int i, j;
-  for (j = 0; j < col; j++) {
-    for (i = 0; i < row; i++) {
-      printf("%e\t", A[i + lda * j]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-}
-
 Px4Nmpc::Px4Nmpc(ros::NodeHandle &nh) {
   // Setup Subscribers
   drone_state_sub =
@@ -142,30 +130,6 @@ void Px4Nmpc::testAcados() {
   // x_init[7] = 0.0;  // Pitch
   // x_init[8] = 0.0;  // Yaw
 
-  double lbx0[DRONE_W_DISTURBANCES_NBX0];
-  double ubx0[DRONE_W_DISTURBANCES_NBX0];
-  lbx0[0] = 0;
-  ubx0[0] = 0;
-  lbx0[1] = 0;
-  ubx0[1] = 0;
-  lbx0[2] = 1.0;
-  ubx0[2] = 1.0;
-  lbx0[3] = 0;
-  ubx0[3] = 0;
-  lbx0[4] = 0;
-  ubx0[4] = 0;
-  lbx0[5] = 0;
-  ubx0[5] = 0;
-  lbx0[6] = 0;
-  ubx0[6] = 0;
-  lbx0[7] = 0;
-  ubx0[7] = 0;
-  lbx0[8] = 0;
-  ubx0[8] = 0;
-
-  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", lbx0);
-  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", ubx0);
-
   // double W[DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY];
   // W[0 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e2;    // Position x
   // W[1 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e2;    // Position y
@@ -180,19 +144,6 @@ void Px4Nmpc::testAcados() {
   // W[10 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-9;  // Pitch cmd
   // W[11 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-9;  // Roll cmd
   // W[12 * (DRONE_W_DISTURBANCES_NY + 1)] = 1.0e-9;  // Thrust
-
-  // for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
-  //   ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "W", W);
-
-  // Initial input
-  // double u_init[DRONE_W_DISTURBANCES_NU];
-  // u_init[0] = 0.0;  // Yaw rate
-  // u_init[1] = 0.0;  // Pitch
-  // u_init[2] = 0.0;  // Roll
-  // u_init[3] = 0.0;  // Thrust
-
-  // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "x", x_init);
-  // ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", u_init);
 
   // Setpoint
   double y_ref[DRONE_W_DISTURBANCES_NY];
@@ -220,16 +171,6 @@ void Px4Nmpc::testAcados() {
   y_ref_e[6] = 0.0;  // Roll
   y_ref_e[7] = 0.0;  // Pitch
   y_ref_e[8] = 0.0;  // Yaw
-  // double x_desired[DRONE_W_DISTURBANCES_NX];
-  // x_desired[0] = 0.0;  // Position x
-  // x_desired[1] = 0.0;  // Position y
-  // x_desired[2] = 1.0;  // Position z
-  // x_desired[3] = 0.0;  // Velocity x
-  // x_desired[4] = 0.0;  // Velocity y
-  // x_desired[5] = 0.0;  // Velocity z
-  // x_desired[6] = 0.0;  // Roll
-  // x_desired[7] = 0.0;  // Pitch
-  // x_desired[8] = 0.0;  // Yaw
 
   for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++) {
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "yref", y_ref);
@@ -238,10 +179,6 @@ void Px4Nmpc::testAcados() {
   }
   ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
                          "yref", y_ref_e);
-
-  // solve ocp in loop ???
-  // int rti_phase = 0;
-  // ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "rti_phase", &rti_phase);
 
   int status = drone_w_disturbances_acados_solve(acados_ocp_capsule);
   double elapsed_time;
@@ -277,4 +214,73 @@ void Px4Nmpc::testAcados() {
 void Px4Nmpc::droneStateCallback(const px4_control_msgs::DroneState &msg) {}
 void Px4Nmpc::setpointCallback(const px4_control_msgs::Setpoint &msg) {}
 void Px4Nmpc::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {}
+
+void Px4Nmpc::setReference(const std::vector<setpoint> &reference) {
+
+  int ref_size = reference.size();
+
+
+    // Setpoint
+  double y_ref[DRONE_W_DISTURBANCES_NY];
+  y_ref[0] = 0.1;   // Position x
+  y_ref[1] = 0.0;   // Position y
+  y_ref[2] = 1.0;   // Position z
+  y_ref[3] = 0.0;   // Velocity x
+  y_ref[4] = 0.0;   // Velocity y
+  y_ref[5] = 0.0;   // Velocity z
+  y_ref[6] = 0.0;   // Roll
+  y_ref[7] = 0.0;   // Pitch
+  y_ref[8] = 0.0;   // Yaw
+  y_ref[9] = 0.0;   // Yaw rate
+  y_ref[10] = 0.0;  // Pitch cmd
+  y_ref[11] = 0.0;  // Roll cmd
+  y_ref[12] = 0.0;  // Thrust
+
+  double y_ref_e[DRONE_W_DISTURBANCES_NYN];
+  y_ref_e[0] = 0.1;  // Position x
+  y_ref_e[1] = 0.0;  // Position y
+  y_ref_e[2] = 1.0;  // Position z
+  y_ref_e[3] = 0.0;  // Velocity x
+  y_ref_e[4] = 0.0;  // Velocity y
+  y_ref_e[5] = 0.0;  // Velocity z
+  y_ref_e[6] = 0.0;  // Roll
+  y_ref_e[7] = 0.0;  // Pitch
+  y_ref_e[8] = 0.0;  // Yaw
+
+    for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++) {
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "yref", y_ref);
+  }
+  ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
+                         "yref", y_ref_e);
+}
+
+void Px4Nmpc::setInitialConditions(const setpoint &state_init) {
+  double x_init[DRONE_W_DISTURBANCES_NBX0];
+  x_init[0] = state_init.pos_x;
+  x_init[1] = state_init.pos_y;
+  x_init[2] = state_init.pos_z;
+  x_init[3] = state_init.vel_x;
+  x_init[4] = state_init.vel_y;
+  x_init[5] = state_init.vel_z;
+  x_init[6] = state_init.q_roll;
+  x_init[7] = state_init.q_pitch;
+  x_init[8] = state_init.q_yaw;
+
+  // Set the initial conditions by setting the lower and upper bounds to the
+  // initial state values
+  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", x_init);
+  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", x_init);
+}
+
+void Px4Nmpc::updateDisturbances(const double &fdis_x, const double &fdis_y,
+                                 const double &fdis_z) {
+  model_parameters[7] = fdis_x;
+  model_parameters[8] = fdis_y;
+  model_parameters[9] = fdis_z;
+
+  for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
+    drone_w_disturbances_acados_update_params(
+        acados_ocp_capsule, i, model_parameters, DRONE_W_DISTURBANCES_NP);
+}
+
 }  // namespace px4_ctrl
