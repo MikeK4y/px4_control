@@ -81,7 +81,7 @@ bool AcadosNMPC::initializeController(const model_parameters &model_params) {
   acados_model_parameters[10] = model_params.k_thrust;  // Thrust coefficients
   acados_model_parameters[11] = model_params.gravity;   // Gravity
 
-  for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
+  for (int i = 0; i <= DRONE_W_DISTURBANCES_N; i++)
     drone_w_disturbances_acados_update_params(acados_ocp_capsule, i,
                                               acados_model_parameters,
                                               DRONE_W_DISTURBANCES_NP);
@@ -95,12 +95,21 @@ void AcadosNMPC::setTrajectory(
   current_reference_trajectory = trajectory;
   trajectory_index = 0;
   trajectory_length = current_reference_trajectory.size();
+  // std::cout << "A " << trajectory_length << " point trajectory was loaded\n";
 }
 
 void AcadosNMPC::setCurrentState(const trajectory_setpoint &state,
                                  const std::vector<double> &disturbances) {
+  // Check if drone is touching the ground
+  bool on_ground = (abs(state.pos_z) < 0.1) &
+                   (abs(disturbances[2] + acados_model_parameters[11]) < 0.1);
+
   updateInitialConditions(state);
-  updateDisturbances(disturbances[0], disturbances[1], disturbances[2]);
+  if (on_ground) {
+    updateDisturbances(disturbances[0], disturbances[1], 0.0);
+    std::cout << "It looks like the drone is on the ground\n";
+  } else
+    updateDisturbances(disturbances[0], disturbances[1], disturbances[2]);
 }
 
 bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
@@ -180,6 +189,11 @@ void AcadosNMPC::updateReference() {
 
   ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
                          "yref", y_ref_e);
+
+  // std::cout << "Reference set to: " << y_ref_e[0] << ", " << y_ref_e[1] << ", "
+  //           << y_ref_e[2] << ", " << y_ref_e[3] << ", " << y_ref_e[4] << ", "
+  //           << y_ref_e[5] << ", " << y_ref_e[6] << ", " << y_ref_e[7] << ", "
+  //           << y_ref_e[8] << "\n";
 }
 
 void AcadosNMPC::updateInitialConditions(
@@ -199,6 +213,11 @@ void AcadosNMPC::updateInitialConditions(
   // initial state values
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", x_init);
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", x_init);
+
+  // std::cout << "Initial state set to: " << x_init[0] << ", " << x_init[1]
+  //           << ", " << x_init[2] << ", " << x_init[3] << ", " << x_init[4]
+  //           << ", " << x_init[5] << ", " << x_init[6] << ", " << x_init[7]
+  //           << ", " << x_init[8] << "\n";
 }
 
 void AcadosNMPC::updateDisturbances(const double &fdis_x, const double &fdis_y,
@@ -207,10 +226,20 @@ void AcadosNMPC::updateDisturbances(const double &fdis_x, const double &fdis_y,
   acados_model_parameters[8] = fdis_y;
   acados_model_parameters[9] = fdis_z;
 
-  for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
+  for (int i = 0; i <= DRONE_W_DISTURBANCES_N; i++)
     drone_w_disturbances_acados_update_params(acados_ocp_capsule, i,
                                               acados_model_parameters,
                                               DRONE_W_DISTURBANCES_NP);
+
+  // std::cout << "Parameters set to: " << acados_model_parameters[0] << ", "
+  //           << acados_model_parameters[1] << ", " << acados_model_parameters[2]
+  //           << ", " << acados_model_parameters[3] << ", "
+  //           << acados_model_parameters[4] << ", " << acados_model_parameters[5]
+  //           << ", " << acados_model_parameters[6] << ", "
+  //           << acados_model_parameters[7] << ", " << acados_model_parameters[8]
+  //           << ", " << acados_model_parameters[9] << ", "
+  //           << acados_model_parameters[10] << ", "
+  //           << acados_model_parameters[11] << "\n";
 }
 
 }  // namespace px4_ctrl

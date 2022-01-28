@@ -23,8 +23,13 @@ PX4Control::PX4Control(ros::NodeHandle &nh, const double &rate) {
   vel_control_pub = nh.advertise<mavros_msgs::PositionTarget>(
       "/mavros/setpoint_raw/local", 1);
 
-  // Setup Service Clients
-  set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+  // Setup Service Servers
+  go_to_start_serv = nh.advertiseService(
+      "/go_to_start", &PX4Control::goToStartServCallback, this);
+  start_trajectory_serv = nh.advertiseService(
+      "/start_trajectory", &PX4Control::startTrajectoryServCallback, this);
+  enable_controller_serv = nh.advertiseService(
+      "/enable_controller", &PX4Control::enableControllerServCallback, this);
 
   // Load parameters
   loadParameters();
@@ -37,6 +42,9 @@ PX4Control::PX4Control(ros::NodeHandle &nh, const double &rate) {
     ROS_ERROR("Failed to initialize Acados NMPC. Exiting\n");
     exit(1);
   }
+  enable_controller = false;
+  trajectory_loaded = false;
+  has_drone_state = false;
 
   // Clear trajectory
   current_reference_trajectory.clear();
@@ -44,6 +52,9 @@ PX4Control::PX4Control(ros::NodeHandle &nh, const double &rate) {
   // Initialize mutexes
   status_mutex.reset(new std::mutex);
   drone_state_mutex.reset(new std::mutex);
+
+  // Start command publisher
+  publisher_worker_t = std::thread(&PX4Control::controlPublisher, this, rate);
 }
 
 PX4Control::~PX4Control() { delete nmpc_controller; };
@@ -89,6 +100,8 @@ void PX4Control::droneStateCallback(const px4_control_msgs::DroneState &msg) {
   disturbances.push_back(msg.disturbances.x);
   disturbances.push_back(msg.disturbances.y);
   disturbances.push_back(msg.disturbances.z);
+
+  has_drone_state = !has_drone_state ? true : has_drone_state;
 }
 
 void PX4Control::setpointCallback(const px4_control_msgs::Setpoint &msg) {
@@ -131,6 +144,64 @@ void PX4Control::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
   }
 }
 
+bool PX4Control::goToStartServCallback(std_srvs::Trigger::Request &req,
+                                       std_srvs::Trigger::Response &res) {
+  if (current_reference_trajectory.size() > 0) {
+    enable_controller = false;
+    std::vector<trajectory_setpoint> reference_trajectory;
+    reference_trajectory.push_back(current_reference_trajectory[0]);
+    nmpc_controller->setTrajectory(reference_trajectory);
+    trajectory_loaded = true;
+    res.success = true;
+    ROS_INFO(
+        "Setpoint was set to the start of the trajectory. Enable controller to "
+        "get there");
+    return true;
+  } else {
+    ROS_WARN("No setpoint or trajectory is loaded. Load one and try again");
+    res.success = false;
+  }
+  return false;
+}
+
+bool PX4Control::startTrajectoryServCallback(std_srvs::Trigger::Request &req,
+                                             std_srvs::Trigger::Response &res) {
+  if (current_reference_trajectory.size() > 0) {
+    enable_controller = false;
+    nmpc_controller->setTrajectory(current_reference_trajectory);
+    trajectory_loaded = true;
+    res.success = true;
+    ROS_INFO("The full trajectory was loaded. Enable controller to get there");
+    return true;
+  } else {
+    ROS_WARN("No setpoint or trajectory is loaded. Load one and try again");
+    res.success = false;
+  }
+  return false;
+}
+
+bool PX4Control::enableControllerServCallback(
+    std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
+  if (trajectory_loaded & req.data) {
+    ROS_WARN("Controller enabled");
+    enable_controller = true;
+    res.success = true;
+    return true;
+  } else if (!trajectory_loaded & req.data) {
+    ROS_WARN("No setpoint or trajectory is loaded. Load one and try again");
+    res.success = false;
+    return false;
+  } else if (!req.data) {
+    ROS_WARN("Controller disabled");
+    enable_controller = false;
+    res.success = true;
+    return true;
+  }
+  ROS_ERROR("Unexpected behavior");
+  res.success = false;
+  return false;
+}
+
 void PX4Control::controlPublisher(const double &pub_rate) {
   ros::Rate rate(pub_rate);
 
@@ -153,6 +224,7 @@ void PX4Control::controlPublisher(const double &pub_rate) {
 
   // Velocity
   mavros_msgs::PositionTarget vel_cmd;
+  vel_cmd.coordinate_frame = vel_cmd.FRAME_BODY_NED;
   vel_cmd.type_mask = vel_cmd.IGNORE_PX | vel_cmd.IGNORE_PY |
                       vel_cmd.IGNORE_PZ | vel_cmd.IGNORE_AFX |
                       vel_cmd.IGNORE_AFY | vel_cmd.IGNORE_AFZ |
@@ -164,13 +236,15 @@ void PX4Control::controlPublisher(const double &pub_rate) {
 
   while (ros::ok()) {
     bool status_ok;
+    bool is_offboard;
     {  // Lock status mutex
       std::lock_guard<std::mutex> status_guard(*(status_mutex));
-      status_ok = current_status.mode == "OFFBOARD" && current_status.connected;
+      is_offboard = current_status.mode == "OFFBOARD";
+      status_ok = current_status.connected;
     }
 
     if (status_ok) {
-      if (enable_controller) {
+      if (enable_controller & has_drone_state & is_offboard) {
         // Update current state
         double current_yaw;
         {  // Lock state mutex
@@ -181,6 +255,9 @@ void PX4Control::controlPublisher(const double &pub_rate) {
 
         std::vector<double> ctrl;
         if (nmpc_controller->getCommands(ctrl)) {
+          // std::cout << "Computed commands are: yaw_rate: " << ctrl[0]
+          //           << ", roll: " << ctrl[2] << ", pitch: " << ctrl[1]
+          //           << ", thrust: " << ctrl[3] << "\n";
           tf2::Quaternion q;
           q.setRPY(ctrl[2], ctrl[1], current_yaw);
           q.normalize();
@@ -193,7 +270,8 @@ void PX4Control::controlPublisher(const double &pub_rate) {
 
           att_cmd.body_rate.z = ctrl[0];
 
-          att_cmd.thrust = ctrl[3];
+          double thrust = ctrl[3] < 0.1 ? 0.1 : ctrl[3];
+          att_cmd.thrust = thrust;
           att_control_pub.publish(att_cmd);
         } else {
           ROS_ERROR("NMPC failed to return command. Hovering");

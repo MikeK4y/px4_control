@@ -50,12 +50,12 @@ def acados_settings(Tf, N):
 
     # State and input cost
     W = np.diag([1e2, 1e2, 1e2,     # Position
-                 1e-3, 1e-3, 1e-3,  # Velocity
-                 1e-6, 1e-6, 1e-6,  # Attitude
-                 1e-9,              # Yaw rate
-                 1e-9,              # Pitch
-                 1e-9,              # Roll
-                 1e-9])             # Thrust
+                 1e-1, 1e-1, 1e-1,  # Velocity
+                 1e-1, 1e-1, 1e-1,  # Attitude
+                 1e0,              # Yaw rate
+                 1e0,              # Pitch
+                 1e0,              # Roll
+                 1e0])             # Thrust
 
     # Stage cost
     ocp.cost.W = W
@@ -87,7 +87,7 @@ def acados_settings(Tf, N):
     pitch_cmd_max = 0.2*np.pi
     roll_cmd_min = -0.2*np.pi
     roll_cmd_max = 0.2*np.pi
-    thrust_min = -1.0
+    thrust_min = 0.0
     thrust_max = 1.0
 
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])
@@ -102,17 +102,17 @@ def acados_settings(Tf, N):
     # Model
     ocp.model = model
     ocp.parameter_values = np.array(
-        [0.15,     # Roll time constant
-         1.02,     # Roll gain
-         0.15,     # Pitch time constant
-         1.02,     # Pitch gain
-         -0.38,    # Damping x
-         -0.38,    # Damping y
-         -0.10,    # Damping z
-         0,        # Disturbance force x
-         0,        # Disturbance force y
-         0,        # Disturbance force z
-         13.74,    # Thrust coefficients
+        [0.15,      # Roll time constant
+         1.02,      # Roll gain
+         0.15,      # Pitch time constant
+         1.02,      # Pitch gain
+         -0.38,     # Damping x
+         -0.38,     # Damping y
+         -0.10,     # Damping z
+         0,         # Disturbance force x
+         0,         # Disturbance force y
+         0,         # Disturbance force z
+         13.74,     # Thrust coefficients
          -9.8066])  # Gravity
 
     # OCP options

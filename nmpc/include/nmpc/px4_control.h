@@ -11,6 +11,8 @@
 
 // ROS messages
 #include <mavros_msgs/State.h>
+#include <std_srvs/SetBool.h>
+#include <std_srvs/Trigger.h>
 
 #include "px4_control_msgs/DroneState.h"
 #include "px4_control_msgs/Setpoint.h"
@@ -40,7 +42,9 @@ class PX4Control {
   ros::Publisher vel_control_pub;
 
   // ROS Services
-  ros::ServiceClient set_mode_client;
+  ros::ServiceServer go_to_start_serv;
+  ros::ServiceServer start_trajectory_serv;
+  ros::ServiceServer enable_controller_serv;
 
   // Callbacks
   void mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg);
@@ -48,6 +52,12 @@ class PX4Control {
   void setpointCallback(const px4_control_msgs::Setpoint &msg);
   void trajectoryCallback(const px4_control_msgs::Trajectory &msg);
 
+  bool goToStartServCallback(std_srvs::Trigger::Request &req,
+                             std_srvs::Trigger::Response &res);
+  bool startTrajectoryServCallback(std_srvs::Trigger::Request &req,
+                                   std_srvs::Trigger::Response &res);
+  bool enableControllerServCallback(std_srvs::SetBool::Request &req,
+                                    std_srvs::SetBool::Response &res);
   /**
    * @brief If tracking is enabled, it publishes the UAS controls. Should run as
    * long as the node is alive
@@ -65,6 +75,8 @@ class PX4Control {
   // Controller
   AcadosNMPC *nmpc_controller;
   bool enable_controller;
+  bool trajectory_loaded;
+  bool has_drone_state;
 
   model_parameters model_params;
   trajectory_setpoint drone_state;
