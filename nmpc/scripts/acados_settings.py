@@ -1,7 +1,6 @@
-from acados_template import AcadosOcp, AcadosOcpSolver, acados_ocp
+from acados_template import AcadosOcp, AcadosOcpSolver
 from drone_model import drone_model
 import numpy as np
-import scipy.linalg
 
 
 def acados_settings(Tf, N):
@@ -50,18 +49,18 @@ def acados_settings(Tf, N):
 
     # State and input cost
     W = np.diag([1e2, 1e2, 1e2,     # Position
-                 1e-1, 1e-1, 1e-1,  # Velocity
+                 1e0, 1e0, 1e0,     # Velocity
                  1e-1, 1e-1, 1e-1,  # Attitude
-                 1e0,              # Yaw rate
-                 1e0,              # Pitch
-                 1e0,              # Roll
-                 1e0])             # Thrust
+                 1e0,               # Yaw rate
+                 1e0,               # Pitch
+                 1e0,               # Roll
+                 1e0])              # Thrust
 
     # Stage cost
     ocp.cost.W = W
 
     # Terminal cost
-    ocp.cost.W_e = N * W[:nx, :nx]
+    ocp.cost.W_e = 10 * N * W[:nx, :nx]
 
     # References
     ocp.cost.yref = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -81,13 +80,13 @@ def acados_settings(Tf, N):
     ocp.constraints.ubx = np.array([roll_max, pitch_max, yaw_max])
 
     # Input constraints
-    yaw_rate_min = -0.5*np.pi
-    yaw_rate_max = 0.5*np.pi
-    pitch_cmd_min = -0.2*np.pi
-    pitch_cmd_max = 0.2*np.pi
-    roll_cmd_min = -0.2*np.pi
-    roll_cmd_max = 0.2*np.pi
-    thrust_min = 0.0
+    yaw_rate_min = -0.1*np.pi
+    yaw_rate_max = 0.1*np.pi
+    pitch_cmd_min = -0.05*np.pi
+    pitch_cmd_max = 0.05*np.pi
+    roll_cmd_min = -0.05*np.pi
+    roll_cmd_max = 0.05*np.pi
+    thrust_min = 0.1
     thrust_max = 1.0
 
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])

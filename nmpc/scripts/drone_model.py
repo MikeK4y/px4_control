@@ -1,5 +1,5 @@
 from acados_template import AcadosModel
-from casadi import SX, SX, vertcat, sin, cos
+from casadi import SX, vertcat, sin, cos
 
 
 def drone_model():

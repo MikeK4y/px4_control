@@ -27,9 +27,9 @@ print('/enable_controller is available')
 setpoint_pub = rp.Publisher("/drone_setpoint", Setpoint, queue_size = 1)
 
 setpoint_msg = Setpoint()
-setpoint_msg.position.x = 1.6
-setpoint_msg.position.y = -3.3
-setpoint_msg.position.z = 0.2
+setpoint_msg.position.x = -1.50
+setpoint_msg.position.y = 2.0
+setpoint_msg.position.z = 0.5
 setpoint_msg.velocity.x = 0.0
 setpoint_msg.velocity.y = 0.0
 setpoint_msg.velocity.z = 0.0

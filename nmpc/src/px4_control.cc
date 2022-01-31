@@ -255,9 +255,6 @@ void PX4Control::controlPublisher(const double &pub_rate) {
 
         std::vector<double> ctrl;
         if (nmpc_controller->getCommands(ctrl)) {
-          // std::cout << "Computed commands are: yaw_rate: " << ctrl[0]
-          //           << ", roll: " << ctrl[2] << ", pitch: " << ctrl[1]
-          //           << ", thrust: " << ctrl[3] << "\n";
           tf2::Quaternion q;
           q.setRPY(ctrl[2], ctrl[1], current_yaw);
           q.normalize();

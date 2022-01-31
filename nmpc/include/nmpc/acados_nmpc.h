@@ -4,7 +4,7 @@
 
 // acados
 #include "acados/utils/math.h"
-#include "acados/utils/print.h"
+// #include "acados/utils/print.h"
 #include "acados_c/external_function_interface.h"
 #include "acados_c/ocp_nlp_interface.h"
 #include "acados_solver_drone_w_disturbances.h"
@@ -89,6 +89,7 @@ class AcadosNMPC {
 
   // Vector with model parameters
   double *acados_model_parameters;
+  double hover_thrust;
 
   // Trajectory variables
   std::vector<trajectory_setpoint> current_reference_trajectory;

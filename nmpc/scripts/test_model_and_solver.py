@@ -14,11 +14,6 @@ nx = model.x.size()[0]
 nu = model.u.size()[0]
 ny = nx + nu
 
-x0 = np.array([0.0, 0.0, 0.5, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0])
-yref = np.array([0.0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-yref_e = np.array([0.0, 0, 1.0, 0, 0, 0, 0, 0, 0])
-
-
 parameter_values = np.array(
     [0.15,      # Roll time constant
     1.02,      # Roll gain
@@ -33,9 +28,18 @@ parameter_values = np.array(
     13.74,     # Thrust coefficients
     -9.8066])  # Gravity
 
+hover_thrust = -parameter_values[11] / parameter_values[10]
+
+x0 = np.array([0.0, 0.0, 1.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0])
+yref = np.array([0.5, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, hover_thrust])
+yref_e = np.array([0.5, 0, 1.0, 0, 0, 0, 0, 0, 0])
+
 x_curr = x0
 
-for i in range(10):
+print("Solving with RTI")
+# acados_solver.options_set('qp_warm_start', 0)
+
+for i in range(20):
     # Set initial conditions
     var = np.array([random.uniform(-0.05, 0.05), random.uniform(-0.05, 0.05), random.uniform(-0.05, 0.05),
                     random.uniform(-0.05, 0.05), random.uniform(-0.05, 0.05), random.uniform(-0.05, 0.05),
@@ -63,13 +67,25 @@ for i in range(10):
     # solve ocp
     t = time.time()
 
+    # Preparation phase
+    acados_solver.options_set("rti_phase", 1)
     status = acados_solver.solve()
     if status != 0:
         print("acados returned status {}.".format(status))
 
     elapsed = 1000 * (time.time() - t)
 
-    print("Elapsed time: {}ms".format(elapsed))
+    print("Preparation elapsed time: {}ms".format(elapsed))
+
+    # Feedback state
+    acados_solver.options_set("rti_phase", 2)
+    status = acados_solver.solve()
+    if status != 0:
+        print("acados returned status {}.".format(status))
+
+    elapsed = 1000 * (time.time() - t)
+
+    print("Solution elapsed time: {}ms".format(elapsed))
 
     # get solution
     x_curr = acados_solver.get(1, "x")
