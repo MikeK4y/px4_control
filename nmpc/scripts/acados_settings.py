@@ -48,13 +48,13 @@ def acados_settings(Tf, N):
     ocp.cost.Vx_e = Vx_e
 
     # State and input cost
-    W = np.diag([1e2, 1e2, 1e2,     # Position
-                 1e0, 1e0, 1e0,     # Velocity
-                 1e-1, 1e-1, 1e-1,  # Attitude
-                 1e0,               # Yaw rate
-                 1e0,               # Pitch
-                 1e0,               # Roll
-                 1e0])              # Thrust
+    W = np.diag([160, 160, 200,     # Position
+                 40, 40, 50,     # Velocity
+                 10, 10, 10,      # Attitude
+                 50,              # Yaw rate
+                 1e3,             # Pitch
+                 1e3,             # Roll
+                 1e3])              # Thrust
 
     # Stage cost
     ocp.cost.W = W
