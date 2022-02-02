@@ -135,7 +135,7 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
 // #ifndef TRACK_TIME
   double elapsed_time;
   ocp_nlp_get(nlp_config, nlp_solver, "time_tot", &elapsed_time);
-  std::cout << "OCP solution time: " << 1000 * elapsed_time << "ms\n";
+  // std::cout << "OCP solution time: " << 1000 * elapsed_time << "ms\n";
   max_ocp_time = max_ocp_time > elapsed_time ? max_ocp_time : elapsed_time;
   min_ocp_time = min_ocp_time < elapsed_time ? min_ocp_time : elapsed_time;
   total_ocp_time += elapsed_time;
@@ -153,9 +153,9 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
     ctrl.push_back(u_0[2]);
     ctrl.push_back(u_0[3]);
 
-    std::cout << "Computed commands are: yaw_rate: " << u_0[0]
-              << ", roll: " << u_0[2] << ", pitch: " << u_0[1]
-              << ", thrust: " << u_0[3] << "\n";
+    // std::cout << "Computed commands are: yaw_rate: " << u_0[0]
+    //           << ", roll: " << u_0[2] << ", pitch: " << u_0[1]
+    //           << ", thrust: " << u_0[3] << "\n";
 
     if (status == ACADOS_MAXITER) {
       std::cout << "Reached max iteration but nevermind...\n";
