@@ -1,0 +1,16 @@
+# Attitude Dynamics
+t_pitch: 0.1357
+k_pitch: 0.9955
+t_roll: 0.1355
+k_roll: 0.9883
+
+# Dampening coefficients
+damping_x: -0.4154
+damping_y: -0.4154
+damping_z: -0.1379
+
+# Thrust coefficient
+k_thrust: 28.5371
+
+# Gravity on world frame
+gravity: -9.8066

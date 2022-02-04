@@ -8,17 +8,8 @@ clear; close all; clc;
 bag_file = '../data/f550.bag';
 flight_data = rosbag(bag_file);
 
-% RC boundary values
-rc_max = 2006;
-rc_min = 982;
-rc_mean = 0.5 * (rc_max + rc_min);
-rc_half_range = 0.5 * (rc_max - rc_min);
-
-rp_max = deg2rad(35);
-yr_max = deg2rad(45);
-
 % Attitude/Thrust commands
-bag_select = select(flight_data, 'Topic', '/mavros/rc/in');
+bag_select = select(flight_data, 'Topic', '/mavros/setpoint_raw/attitude');
 bag_struct = readMessages(bag_select, 'DataFormat', 'struct');
 
 cmd_data = table();
@@ -26,10 +17,14 @@ cmd_data.time = ...
     cellfun(@(m) double(m.Header.Stamp.Sec), bag_struct) + ...
     cellfun(@(m) double(m.Header.Stamp.Nsec)*1e-9, bag_struct);
 
-cmd_data.thrust = (cellfun(@(m) double(m.Channels(1)), bag_struct) - rc_min) / (2 * rc_half_range);
-cmd_data.roll = rp_max * ((cellfun(@(m) double(m.Channels(2)), bag_struct) - rc_mean) / rc_half_range);
-cmd_data.pitch = rp_max * ((cellfun(@(m) double(m.Channels(3)), bag_struct) - rc_mean) / rc_half_range);
-cmd_data.yaw_rate = yr_max * ((cellfun(@(m) double(m.Channels(4)), bag_struct) - rc_mean) / rc_half_range);
+cmd_data.qw = cellfun(@(m) double(m.Orientation.W), bag_struct);
+cmd_data.qx = cellfun(@(m) double(m.Orientation.X), bag_struct);
+cmd_data.qy = cellfun(@(m) double(m.Orientation.Y), bag_struct);
+cmd_data.qz = cellfun(@(m) double(m.Orientation.Z), bag_struct);
+
+cmd_data.thrust = cellfun(@(m) double(m.Thrust), bag_struct);
+
+cmd_data.yaw_rate = cellfun(@(m) double(m.BodyRate.Z), bag_struct);
 
 % Odometry
 bag_select = select(flight_data, 'Topic', '/mavros/local_position/odom');
@@ -76,6 +71,16 @@ imu_data.qydot = cellfun(@(m) double(m.AngularVelocity.Y), bag_struct);
 imu_data.qzdot = cellfun(@(m) double(m.AngularVelocity.Z), bag_struct);
 
 %% Process Data
+
+% Convert CMDs from Quaternion to RPY
+for i = 1 : length(cmd_data.time)
+    q = [cmd_data.qw(i), cmd_data.qx(i), cmd_data.qy(i), cmd_data.qz(i)];
+    
+    ypr = quat2eul(q);
+    
+    cmd_data.r(i) = ypr(3);
+    cmd_data.p(i) = ypr(2);
+end
 
 % Remove gravity from IMU data and get Acceleration on World frame
 % Also get Euler Angles from Quaternion
@@ -144,8 +149,8 @@ modelID_data.roll = interp1(imu_data.time, imu_data.roll, modelID_data.time, 'sp
 
 modelID_data.Tcmd = cmd_data.thrust;
 modelID_data.Ycmd = cmd_data.yaw_rate;
-modelID_data.Pcmd = cmd_data.pitch;
-modelID_data.Rcmd = cmd_data.roll;
+modelID_data.Pcmd = cmd_data.p;
+modelID_data.Rcmd = cmd_data.r;
 
 % Measurements
 measurement_data = table();
