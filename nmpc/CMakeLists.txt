@@ -5,7 +5,7 @@ project(nmpc)
 add_compile_options(-std=c++14)
 
 # Option to get acados NMPC time information
-option(TRACK_ACADOS_TIME "Track acados OCP solution time" OFF)
+option(TRACK_ACADOS_TIME "Track acados OCP solution time" ON)
 
 if(TRACK_ACADOS_TIME)
   add_definitions(-DTRACK_TIME)
@@ -51,20 +51,30 @@ include_directories(
   ${nmpc_generated_INCLUDE_DIRS}
 )
 
-add_executable(px4_nmpc_node
-  src/px4_control_node.cc
-  src/px4_control.cc
+## Runnables
+add_library(acados_nmpc
   src/acados_nmpc.cc
 )
 
+add_executable(px4_nmpc_node
+  src/px4_control_node.cc
+  src/px4_control.cc
+)
+
+## Dependencies
 add_dependencies(px4_nmpc_node
   ${catkin_EXPORTED_TARGETS}
 )
 
-target_link_libraries(px4_nmpc_node
-  ${catkin_LIBRARIES}
+## Links
+target_link_libraries(acados_nmpc
   ${acados_LIBRARIES}
   ${nmpc_generated_LIBRARIES}
+)
+
+target_link_libraries(px4_nmpc_node
+  ${catkin_LIBRARIES}
+  acados_nmpc
 )
 
 #############

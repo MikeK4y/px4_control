@@ -10,6 +10,9 @@ __pycache__
 *.o
 *.so
 
+# Matlab data
+*.mat
+
 # Acados generated
 nmpc/scripts/c_generated_code
 nmpc/scripts/acados_ocp.json

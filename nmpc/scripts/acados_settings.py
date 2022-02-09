@@ -3,7 +3,7 @@ from drone_model import drone_model
 import numpy as np
 
 
-def acados_settings(Tf, N):
+def acados_settings(Tf, N, generate_code=False):
     """
       Set's up the acados Optimal Control Problem and Solver
 
@@ -52,9 +52,9 @@ def acados_settings(Tf, N):
                  50, 50, 50,     # Velocity
                  10, 10, 10,     # Attitude
                  50,             # Yaw rate
-                 1e3,            # Pitch
-                 1e3,            # Roll
-                 1e3])           # Thrust
+                 1.5e3,          # Pitch
+                 1.5e3,          # Roll
+                 1.5e3])         # Thrust
 
     # Stage cost
     ocp.cost.W = W
@@ -87,7 +87,7 @@ def acados_settings(Tf, N):
     roll_cmd_min = -0.05*np.pi
     roll_cmd_max = 0.05*np.pi
     thrust_min = 0.1
-    thrust_max = 1.0
+    thrust_max = 0.5
 
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])
     ocp.constraints.lbu = np.array(
@@ -101,24 +101,22 @@ def acados_settings(Tf, N):
     # Model
     ocp.model = model
     ocp.parameter_values = np.array(
-        [0.15,      # Roll time constant
-         1.02,      # Roll gain
-         0.15,      # Pitch time constant
-         1.02,      # Pitch gain
-         -0.38,     # Damping x
-         -0.38,     # Damping y
-         -0.10,     # Damping z
-         0,         # Disturbance force x
-         0,         # Disturbance force y
-         0,         # Disturbance force z
-         13.74,     # Thrust coefficients
-         -9.8066])  # Gravity
+        [0.1355,      # Roll time constant
+         0.9883,      # Roll gain
+         0.1357,      # Pitch time constant
+         0.9955,      # Pitch gain
+         -0.4154,     # Damping x
+         -0.4154,     # Damping y
+         -0.1379,     # Damping z
+         0,           # Disturbance force x
+         0,           # Disturbance force y
+         0,           # Disturbance force z
+         28.5371,     # Thrust coefficients
+         -9.8066])    # Gravity
 
     # OCP options
     ocp.solver_options.tf = Tf
     # PARTIAL_CONDENSING_HPIPM
-    # PARTIAL_CONDENSING_OSQP
-    # PARTIAL_CONDENSING_QPDUNES
     # FULL_CONDENSING_HPIPM
     # FULL_CONDENSING_QPOASES
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
@@ -132,10 +130,13 @@ def acados_settings(Tf, N):
     # ocp.acados_include_path = '../../acados/include'
     # ocp.acados_lib_path = '../../acados/lib'
 
-    acados_solver = AcadosOcpSolver(ocp, json_file="acados_ocp.json")
+    acados_solver = AcadosOcpSolver(ocp)
 
     return model, acados_solver
 
 
-acados_settings(2, 40)
-print("Acados NMPC generated")
+if __name__ == "__main__":
+    T = 2  # sec
+    control_rate = 20  # Hz
+    acados_settings(T, T*control_rate, generate_code=True)
+    print("Acados NMPC generated")

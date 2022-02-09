@@ -18,10 +18,6 @@
 #include "px4_control_msgs/Setpoint.h"
 #include "px4_control_msgs/Trajectory.h"
 
-/**
- * @brief PX4 Nonlinear Model Predictive Controller. Uses c code generated from
- * acados for the nmpc
- */
 namespace px4_ctrl {
 class PX4Control {
  public:
@@ -58,12 +54,13 @@ class PX4Control {
                                    std_srvs::Trigger::Response &res);
   bool enableControllerServCallback(std_srvs::SetBool::Request &req,
                                     std_srvs::SetBool::Response &res);
+
   /**
-   * @brief If tracking is enabled, it publishes the UAS controls. Should run as
+   * @brief If tracking is enabled, it publishes the UAS commands. Should run as
    * long as the node is alive
    * @param pub_rate Publishing rate
    */
-  void controlPublisher(const double &pub_rate);
+  void commandPublisher(const double &pub_rate);
 
   /** @brief Loads the node parameters
    */
@@ -80,7 +77,7 @@ class PX4Control {
 
   model_parameters model_params;
   trajectory_setpoint drone_state;
-  std::vector<double> disturbances;
+  std::vector<double> disturbances, weights;
   std::vector<trajectory_setpoint> current_reference_trajectory;
 
   std::unique_ptr<std::mutex> status_mutex;

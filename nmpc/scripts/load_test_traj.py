@@ -5,7 +5,7 @@ import time
 from px4_control_msgs.msg import Setpoint, Trajectory
 
 t_traj = 20.0
-control_rate = 20.0
+control_rate = 10.0
 
 l = 0.5
 alt = 0.5
@@ -32,7 +32,7 @@ for i in range(steps):
 
   set_point.orientation.x = 0.0
   set_point.orientation.y = 0.0
-  set_point.orientation.z = theta_i - math.pi
+  set_point.orientation.z = 0.5 * (theta_i - math.pi)
 
   traj.append(set_point)
 

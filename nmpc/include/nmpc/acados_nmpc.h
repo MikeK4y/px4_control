@@ -9,10 +9,6 @@
 #include "acados_c/ocp_nlp_interface.h"
 #include "acados_solver_drone_w_disturbances.h"
 
-/**
- * @brief Nonlinear Model Predictive Controller for UAS. Uses c code generated
- * from acados for the nmpc
- */
 namespace px4_ctrl {
 
 struct trajectory_setpoint {
@@ -50,6 +46,14 @@ class AcadosNMPC {
    * @returns True if successful
    */
   bool initializeController(const model_parameters &model_params);
+
+  /**
+   * @brief Sets the weighing matrix for the cost function
+   * @param weights A vector containing the diagonal elements of the weighing
+   * matrix
+   * @returns True if successful
+   */
+  bool setWeighingMatrix(const std::vector<double> &weights);
 
   /**
    * @brief Sets the reference trajectory

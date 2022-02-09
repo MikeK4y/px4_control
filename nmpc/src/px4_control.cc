@@ -31,12 +31,17 @@ PX4Control::PX4Control(ros::NodeHandle &nh, const double &rate) {
   enable_controller_serv = nh.advertiseService(
       "/enable_controller", &PX4Control::enableControllerServCallback, this);
 
+  // Clear trajectory and weights
+  current_reference_trajectory.clear();
+  weights.clear();
+
   // Load parameters
   loadParameters();
 
   // Initialize acados NMPC
   nmpc_controller = new AcadosNMPC();
-  if (nmpc_controller->initializeController(model_params)) {
+  if (nmpc_controller->initializeController(model_params) &&
+      nmpc_controller->setWeighingMatrix(weights)) {
     ROS_INFO("NMPC Initialized\n");
   } else {
     ROS_ERROR("Failed to initialize Acados NMPC. Exiting\n");
@@ -46,15 +51,12 @@ PX4Control::PX4Control(ros::NodeHandle &nh, const double &rate) {
   trajectory_loaded = false;
   has_drone_state = false;
 
-  // Clear trajectory
-  current_reference_trajectory.clear();
-
   // Initialize mutexes
   status_mutex.reset(new std::mutex);
   drone_state_mutex.reset(new std::mutex);
 
   // Start command publisher
-  publisher_worker_t = std::thread(&PX4Control::controlPublisher, this, rate);
+  publisher_worker_t = std::thread(&PX4Control::commandPublisher, this, rate);
 }
 
 PX4Control::~PX4Control() { delete nmpc_controller; };
@@ -69,13 +71,41 @@ void PX4Control::loadParameters() {
   nh_pvt.param("t_roll", model_params.t_roll, 1.0);
   nh_pvt.param("k_roll", model_params.k_roll, 1.0);
 
-  nh_pvt.param("damping_x", model_params.damp_x, -1.0);
-  nh_pvt.param("damping_y", model_params.damp_y, -1.0);
-  nh_pvt.param("damping_z", model_params.damp_z, -1.0);
+  std::vector<double> damping_coef;
+  nh_pvt.getParam("damping_coef", damping_coef);
+  model_params.damp_x = damping_coef[0];
+  model_params.damp_y = damping_coef[1];
+  model_params.damp_z = damping_coef[2];
 
   nh_pvt.param("k_thrust", model_params.k_thrust, 1.0);
 
   nh_pvt.param("gravity", model_params.gravity, -9.8066);
+
+  std::vector<double> pos_w, vel_w, att_w;
+  double yaw_rate_cmd_w, pitch_cmd_w, roll_cmd_w, thrust_cmd_w;
+
+  nh_pvt.getParam("pos_w", pos_w);
+  nh_pvt.getParam("vel_w", vel_w);
+  nh_pvt.getParam("att_w", att_w);
+  nh_pvt.getParam("yaw_rate_cmd_w", yaw_rate_cmd_w);
+  nh_pvt.getParam("pitch_cmd_w", pitch_cmd_w);
+  nh_pvt.getParam("roll_cmd_w", roll_cmd_w);
+  nh_pvt.getParam("thrust_cmd_w", thrust_cmd_w);
+
+  // Cost function weights
+  weights.push_back(pos_w[0]);
+  weights.push_back(pos_w[1]);
+  weights.push_back(pos_w[2]);
+  weights.push_back(vel_w[0]);
+  weights.push_back(vel_w[1]);
+  weights.push_back(vel_w[2]);
+  weights.push_back(att_w[0]);
+  weights.push_back(att_w[1]);
+  weights.push_back(att_w[2]);
+  weights.push_back(yaw_rate_cmd_w);
+  weights.push_back(pitch_cmd_w);
+  weights.push_back(roll_cmd_w);
+  weights.push_back(thrust_cmd_w);
 }
 
 // Callbacks
@@ -202,7 +232,7 @@ bool PX4Control::enableControllerServCallback(
   return false;
 }
 
-void PX4Control::controlPublisher(const double &pub_rate) {
+void PX4Control::commandPublisher(const double &pub_rate) {
   ros::Rate rate(pub_rate);
 
   // Make sure vehicle is connected

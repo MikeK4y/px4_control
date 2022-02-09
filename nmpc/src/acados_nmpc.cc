@@ -4,21 +4,21 @@
 
 namespace px4_ctrl {
 AcadosNMPC::AcadosNMPC() {
-// #ifndef TRACK_TIME
+#ifndef TRACK_TIME
   total_ocp_time = 0.0;
   min_ocp_time = 1.0e9;
   max_ocp_time = 0.0;
   total_ocp_calls = 0;
-// #endif
+#endif
 }
 
 AcadosNMPC::~AcadosNMPC() {
-// #ifndef TRACK_TIME
+#ifndef TRACK_TIME
   std::cout << "Average ocp solving time: "
             << 1000 * (total_ocp_time / total_ocp_calls) << "ms\n";
   std::cout << "Maximum ocp solving time: " << 1000 * max_ocp_time << "ms\n";
   std::cout << "Minimum ocp solving time: " << 1000 * min_ocp_time << "ms\n";
-// #endif
+#endif
   // Free Acados Solver
   int status = drone_w_disturbances_acados_free(acados_ocp_capsule);
   if (status) {
@@ -91,26 +91,59 @@ bool AcadosNMPC::initializeController(const model_parameters &model_params) {
   return true;
 }
 
+bool AcadosNMPC::setWeighingMatrix(const std::vector<double> &weights) {
+  if (weights.size() == DRONE_W_DISTURBANCES_NY) {
+    double W[DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY];
+    W[0 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[0];    // Position x
+    W[1 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[1];    // Position y
+    W[2 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[2];    // Position z
+    W[3 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[3];    // Velocity x
+    W[4 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[4];    // Velocity y
+    W[5 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[5];    // Velocity z
+    W[6 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[6];    // Roll
+    W[7 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[7];    // Pitch
+    W[8 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[8];    // Yaw
+    W[9 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[9];    // Yaw rate
+    W[10 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[10];  // Pitch cmd
+    W[11 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[11];  // Roll cmd
+    W[12 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[12];  // Thrust
+
+    for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
+      ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "W", W);
+
+    /** TODO: Solve CARE instead */
+    double WN[DRONE_W_DISTURBANCES_NX * DRONE_W_DISTURBANCES_NX];
+    WN[0 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[0];
+    WN[1 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[1];
+    WN[2 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[2];
+    WN[3 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[3];
+    WN[4 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[4];
+    WN[5 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[5];
+    WN[6 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[6];
+    WN[7 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[7];
+    WN[8 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[8];
+
+    ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
+                           "W", WN);
+    return true;
+  } else {
+    std::cout << "Was expecting a vector of size " << DRONE_W_DISTURBANCES_NY
+              << "\n";
+  }
+  return false;
+}
+
 void AcadosNMPC::setTrajectory(
     const std::vector<trajectory_setpoint> &trajectory) {
   current_reference_trajectory.clear();
   current_reference_trajectory = trajectory;
   trajectory_index = 0;
   trajectory_length = current_reference_trajectory.size();
-  // std::cout << "A " << trajectory_length << " point trajectory was loaded\n";
 }
 
 void AcadosNMPC::setCurrentState(const trajectory_setpoint &state,
                                  const std::vector<double> &disturbances) {
-  // Check if drone is touching the ground
-  // bool on_ground = (abs(state.pos_z) < 0.1) &
-  //                  (abs(disturbances[2] + acados_model_parameters[11]) < 0.1);
-
   updateInitialConditions(state);
-  // if (on_ground) {
-  //   updateDisturbances(disturbances[0], disturbances[1], 0.0);
-  //   std::cout << "It looks like the drone is on the ground\n";
-  // } else
   updateDisturbances(disturbances[0], disturbances[1], disturbances[2]);
 }
 
@@ -121,27 +154,15 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
                          ? trajectory_index + 1
                          : trajectory_index;
 
-  // RTI preparation
-  // std::cout << "Preparing RTI\n";
-  // int rti_phase = 1;
-  // ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "rti_phase", &rti_phase);
-
-  // // RTI feedback and solution
-  // rti_phase = 2;
-  // std::cout << "RTI set to feedback\n";
-  // ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "rti_phase", &rti_phase);
-  // std::cout << "Solving OCP\n";
   int status = drone_w_disturbances_acados_solve(acados_ocp_capsule);
-// #ifndef TRACK_TIME
+#ifndef TRACK_TIME
   double elapsed_time;
   ocp_nlp_get(nlp_config, nlp_solver, "time_tot", &elapsed_time);
-  // std::cout << "OCP solution time: " << 1000 * elapsed_time << "ms\n";
   max_ocp_time = max_ocp_time > elapsed_time ? max_ocp_time : elapsed_time;
   min_ocp_time = min_ocp_time < elapsed_time ? min_ocp_time : elapsed_time;
   total_ocp_time += elapsed_time;
   total_ocp_calls++;
-
-// #endif
+#endif
 
   // Get first control input
   if (status == ACADOS_SUCCESS || status == ACADOS_MAXITER) {
@@ -153,12 +174,8 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
     ctrl.push_back(u_0[2]);
     ctrl.push_back(u_0[3]);
 
-    // std::cout << "Computed commands are: yaw_rate: " << u_0[0]
-    //           << ", roll: " << u_0[2] << ", pitch: " << u_0[1]
-    //           << ", thrust: " << u_0[3] << "\n";
-
     if (status == ACADOS_MAXITER) {
-      std::cout << "Reached max iteration but nevermind...\n";
+      std::cout << "Reached max iteration but...\n";
     }
     return true;
   } else {
@@ -210,11 +227,6 @@ void AcadosNMPC::updateReference() {
 
   ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
                          "yref", y_ref_e);
-
-  // std::cout << "Reference set to: " << y_ref_e[0] << ", " << y_ref_e[1] << ", "
-  //           << y_ref_e[2] << ", " << y_ref_e[3] << ", " << y_ref_e[4] << ", "
-  //           << y_ref_e[5] << ", " << y_ref_e[6] << ", " << y_ref_e[7] << ", "
-  //           << y_ref_e[8] << "\n";
 }
 
 void AcadosNMPC::updateInitialConditions(
@@ -234,11 +246,6 @@ void AcadosNMPC::updateInitialConditions(
   // initial state values
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", x_init);
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", x_init);
-
-  // std::cout << "Initial state set to: " << x_init[0] << ", " << x_init[1]
-  //           << ", " << x_init[2] << ", " << x_init[3] << ", " << x_init[4]
-  //           << ", " << x_init[5] << ", " << x_init[6] << ", " << x_init[7]
-  //           << ", " << x_init[8] << "\n";
 }
 
 void AcadosNMPC::updateDisturbances(const double &fdis_x, const double &fdis_y,
@@ -251,16 +258,6 @@ void AcadosNMPC::updateDisturbances(const double &fdis_x, const double &fdis_y,
     drone_w_disturbances_acados_update_params(acados_ocp_capsule, i,
                                               acados_model_parameters,
                                               DRONE_W_DISTURBANCES_NP);
-
-  // std::cout << "Parameters set to: " << acados_model_parameters[0] << ", "
-  //           << acados_model_parameters[1] << ", " << acados_model_parameters[2]
-  //           << ", " << acados_model_parameters[3] << ", "
-  //           << acados_model_parameters[4] << ", " << acados_model_parameters[5]
-  //           << ", " << acados_model_parameters[6] << ", "
-  //           << acados_model_parameters[7] << ", " << acados_model_parameters[8]
-  //           << ", " << acados_model_parameters[9] << ", "
-  //           << acados_model_parameters[10] << ", "
-  //           << acados_model_parameters[11] << "\n";
 }
 
 }  // namespace px4_ctrl

@@ -4,13 +4,21 @@ k_pitch: 0.9955
 t_roll: 0.1355
 k_roll: 0.9883
 
-# Dampening coefficients
-damping_x: -0.4154
-damping_y: -0.4154
-damping_z: -0.1379
+# Damping coefficients
+damping_coef: : [-0.4154, -0.4154, -0.1379]
 
 # Thrust coefficient
 k_thrust: 28.5371
 
 # Gravity on world frame
 gravity: -9.8066
+
+# Cost function weights
+pos_w: [20, 20, 20]
+vel_w: [5, 5, 5]
+att_w: [1, 1, 1]
+
+yaw_rate_cmd_w: 10
+pitch_cmd_w: 150
+roll_cmd_w: 150
+thrust_cmd_w: 150
