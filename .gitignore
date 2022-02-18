@@ -15,4 +15,4 @@ __pycache__
 
 # Acados generated
 nmpc/scripts/c_generated_code
-nmpc/scripts/acados_ocp.json
+nmpc/scripts/acados_ocp_nlp.json

@@ -48,13 +48,13 @@ def acados_settings(Tf, N, generate_code=False):
     ocp.cost.Vx_e = Vx_e
 
     # State and input cost
-    W = np.diag([300, 300, 300,  # Position
-                 50, 50, 50,     # Velocity
-                 10, 10, 10,     # Attitude
-                 50,             # Yaw rate
-                 1.5e3,          # Pitch
-                 1.5e3,          # Roll
-                 1.5e3])         # Thrust
+    W = np.diag([20, 20, 20,  # Position
+                 5, 5, 5,     # Velocity
+                 1, 1, 1,     # Attitude
+                 10,          # Yaw rate
+                 150,         # Pitch
+                 150,         # Roll
+                 150])        # Thrust
 
     # Stage cost
     ocp.cost.W = W
@@ -137,6 +137,6 @@ def acados_settings(Tf, N, generate_code=False):
 
 if __name__ == "__main__":
     T = 2  # sec
-    control_rate = 20  # Hz
+    control_rate = 10  # Hz
     acados_settings(T, T*control_rate, generate_code=True)
     print("Acados NMPC generated")
