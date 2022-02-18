@@ -39,16 +39,21 @@ model_params = [params_opt(2), params_opt(2), params_opt(3), params_opt(1), tp, 
 save('model_params.mat', 'model_params');
 
 %% Check Results
-xddot_est = zeros(length(modelID_data.time), 1);
-yddot_est = zeros(length(modelID_data.time), 1);
-zddot_est = zeros(length(modelID_data.time), 1);
+xdot_est = zeros(length(modelID_data.time), 1);
+ydot_est = zeros(length(modelID_data.time), 1);
+zdot_est = zeros(length(modelID_data.time), 1);
 
-for i = 2 : length(modelID_data.time)
-    [xddot_est(i), yddot_est(i), zddot_est(i)] = droneModel(...
-        modelID_data.xdot(i - 1), modelID_data.ydot(i - 1), modelID_data.zdot(i - 1), ...
-        [modelID_data.qw(i - 1), modelID_data.qx(i - 1), modelID_data.qy(i - 1), modelID_data.qz(i - 1)], ...
-        modelID_data.Tcmd(i - 1), ...
+for i = 1 : (length(modelID_data.time) - 1)
+    [xddot_est, yddot_est, zddot_est] = droneModel(...
+        modelID_data.xdot(i), modelID_data.ydot(i), modelID_data.zdot(i), ...
+        [modelID_data.qw(i), modelID_data.qx(i), modelID_data.qy(i), modelID_data.qz(i)], ...
+        modelID_data.Tcmd(i), ...
         params_opt(1), params_opt(2), params_opt(2), params_opt(3));
+
+    dt = modelID_data.time(i + 1) - modelID_data.time(i);
+    xdot_est(i + 1) = modelID_data.xdot(i) + dt * xddot_est;
+    ydot_est(i + 1) = modelID_data.ydot(i) + dt * yddot_est;
+    zdot_est(i + 1) = modelID_data.zdot(i) + dt * zddot_est;
 end
 
 %% Plot results
@@ -61,16 +66,16 @@ compare(pitch_data, pitch_tf)
 figure
 subplot(3, 1, 1)
 hold on
-plot(modelID_data.time, modelID_data.xddot, 'b')
-plot(modelID_data.time, xddot_est, 'r')
+plot(modelID_data.time, modelID_data.xdot, 'b')
+plot(modelID_data.time, xdot_est, 'r')
 hold off
 subplot(3, 1, 2)
 hold on
-plot(modelID_data.time, modelID_data.yddot, 'b')
-plot(modelID_data.time, yddot_est, 'r')
+plot(modelID_data.time, modelID_data.ydot, 'b')
+plot(modelID_data.time, ydot_est, 'r')
 hold off
 subplot(3, 1, 3)
 hold on
-plot(modelID_data.time, modelID_data.zddot, 'b')
-plot(modelID_data.time, zddot_est, 'r')
+plot(modelID_data.time, modelID_data.zdot, 'b')
+plot(modelID_data.time, zdot_est, 'r')
 hold off
