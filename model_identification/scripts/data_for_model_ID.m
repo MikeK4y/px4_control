@@ -2,11 +2,35 @@
 clear; close all; clc;
 
 %% Load flight data
-% bag_file = 'data/sim_data_2021-12-22-12-02-28.bag';
-% bag_file = 'data/sim_data_2021-12-23-15-09-10.bag';
-% bag_file = 'data/sim_data_2021-12-23-15-30-48.bag';
 bag_file = '../data/f550.bag';
 flight_data = rosbag(bag_file);
+
+% RC boundary values
+% rc_max = [2005, 2005, 2004, 2005]; %[RC1_MAX, RC2_MAX, RC3_MAX, RC4_MAX]
+% rc_min = [982, 982, 985, 982]; %[RC1_MIN, RC2_MIN, RC3_MIN, RC4_MIN]
+% rc_rev = [1, -1, 1, 1]; %[RC1_REV, RC2_REV, RC3_REV, RC4_REV]
+% 
+% rc_mean = 0.5 * (rc_max + rc_min);
+% rc_half_range = 0.5 * (rc_max - rc_min);
+% 
+% rp_max = deg2rad(35); % MPC_MAN_TILT_MAX
+% yr_max = deg2rad(213.2); % MPC_MAN_Y_MAX
+% 
+% % Attitude/Thrust commands
+% bag_select = select(flight_data, 'Topic', '/mavros/rc/in');
+% bag_struct = readMessages(bag_select, 'DataFormat', 'struct');
+% 
+% cmd_data = table();
+% cmd_data.time = ...
+%     cellfun(@(m) double(m.Header.Stamp.Sec), bag_struct) + ...
+%     cellfun(@(m) double(m.Header.Stamp.Nsec)*1e-9, bag_struct);
+% 
+% % cmd_data.roll = rp_max * ((cellfun(@(m) double(m.Channels(2)), bag_struct) - rc_mean) / rc_half_range);
+% 
+% cmd_data.thrust = rc_rev(3) * (cellfun(@(m) double(m.Channels(3)), bag_struct) - rc_min(3)) / (2 * rc_half_range(3));
+% cmd_data.roll = rc_rev(1) * rp_max * ((cellfun(@(m) double(m.Channels(1)), bag_struct) - rc_mean(1)) / rc_half_range(1));
+% cmd_data.pitch = rc_rev(2) * rp_max * ((cellfun(@(m) double(m.Channels(2)), bag_struct) - rc_mean(2)) / rc_half_range(2));
+% cmd_data.yaw_rate = rc_rev(4) * yr_max * ((cellfun(@(m) double(m.Channels(4)), bag_struct) - rc_mean(4)) / rc_half_range(4));
 
 % RC boundary values
 rc_max = 2006;
