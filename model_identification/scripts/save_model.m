@@ -30,7 +30,6 @@ fprintf(fileID, 'yaw_rate_cmd_w: 10\n');
 fprintf(fileID, 'pitch_cmd_w: 150\n');
 fprintf(fileID, 'roll_cmd_w: 150\n');
 fprintf(fileID, 'thrust_cmd_w: 150\n');
-fprintf(fileID, '\n');
 
 fclose(fileID);
 end

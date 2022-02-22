@@ -94,6 +94,9 @@ bool AcadosNMPC::initializeController(const model_parameters &model_params) {
 bool AcadosNMPC::setWeighingMatrix(const std::vector<double> &weights) {
   if (weights.size() == DRONE_W_DISTURBANCES_NY) {
     double W[DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY];
+    for (int i = 0; i < DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY; i++)
+      W[i] = 0.0;
+
     W[0 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[0];    // Position x
     W[1 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[1];    // Position y
     W[2 * (DRONE_W_DISTURBANCES_NY + 1)] = weights[2];    // Position z
@@ -113,6 +116,9 @@ bool AcadosNMPC::setWeighingMatrix(const std::vector<double> &weights) {
 
     /** TODO: Solve CARE instead */
     double WN[DRONE_W_DISTURBANCES_NX * DRONE_W_DISTURBANCES_NX];
+    for (int i = 0; i < DRONE_W_DISTURBANCES_NX * DRONE_W_DISTURBANCES_NX; i++)
+      WN[i] = 0.0;
+
     WN[0 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[0];
     WN[1 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[1];
     WN[2 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[2];

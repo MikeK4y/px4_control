@@ -172,11 +172,16 @@ void StateObserver::predict(ros::Time pred_time) {
   // Find input for the prediction time step
   /** TODO: Doesn't work as I was expecting. In the test bag files the cmds
    * appear first but have a timestamp after the odometry's*/
+  Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
   double dt = (pred_time - past_state_time).toSec();
-  double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
-  double dt_p = dt_l < dt ? dt - dt_l : 0.0;
 
-  Eigen::Vector4d cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
+  // If there's been a while without a new cmd set them to zero
+  if ((pred_time - latest_cmd_time).toSec() < 0.5) {
+    double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
+    double dt_p = dt_l < dt ? dt - dt_l : 0.0;
+
+    cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
+  }
 
   // Use input to get state prediction
   Eigen::Matrix3d R_mat = yprToRotMat(state(6, 0), state(7, 0), state(8, 0));

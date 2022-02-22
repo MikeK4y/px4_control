@@ -87,7 +87,7 @@ def acados_settings(Tf, N, generate_code=False):
     roll_cmd_min = -0.05*np.pi
     roll_cmd_max = 0.05*np.pi
     thrust_min = 0.1
-    thrust_max = 0.5
+    thrust_max = 1.0
 
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])
     ocp.constraints.lbu = np.array(
@@ -137,6 +137,6 @@ def acados_settings(Tf, N, generate_code=False):
 
 if __name__ == "__main__":
     T = 2  # sec
-    control_rate = 10  # Hz
+    control_rate = 20  # Hz
     acados_settings(T, T*control_rate, generate_code=True)
     print("Acados NMPC generated")

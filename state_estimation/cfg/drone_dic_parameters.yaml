@@ -22,4 +22,3 @@ yaw_rate_cmd_w: 10
 pitch_cmd_w: 150
 roll_cmd_w: 150
 thrust_cmd_w: 150
-
