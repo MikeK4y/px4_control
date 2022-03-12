@@ -1,9 +1,7 @@
 import time
 import numpy as np
 import random
-from acados_settings import acados_settings
-
-from math import pi
+from acados_settings_alt import acados_settings
 
 Tf = 2.0  # Prediction horizon
 N = 40    # Discretization steps
@@ -32,9 +30,9 @@ parameter_values = np.array(
 
 hover_thrust = -parameter_values[11] / parameter_values[10]
 
-x0 =     np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-yref =   np.array([0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, pi*0.5, 0.0, 0.0, 0.0, hover_thrust])
-yref_e = np.array([0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, pi*0.5])
+x0 =     np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+yref =   np.array([0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.7071, 0.0, 0.0, 0.7071, 0.0, 0.0, 0.0, hover_thrust])
+yref_e = np.array([0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.7071, 0.0, 0.0, 0.7071])
 
 x_curr = x0
 
