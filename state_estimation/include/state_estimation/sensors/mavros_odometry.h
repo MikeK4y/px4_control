@@ -1,5 +1,6 @@
 #include "state_estimation/sensors/base_sensor.h"
 
+namespace px4_ctrl {
 class MavrosOdometry : public BaseSensor {
  public:
   MavrosOdometry() {}
@@ -13,9 +14,9 @@ class MavrosOdometry : public BaseSensor {
    * @param H_mat Sensor's H matrix
    * @param y_pred Sensor's expected measurement at the predicted state
    */
-  virtual void correctionData(const Eigen::MatrixXd& state,
-                              Eigen::MatrixXd& H_mat,
-                              Eigen::MatrixXd& y_expected) override {
+  virtual void correctionData(const Eigen::MatrixXd &state,
+                              Eigen::MatrixXd &H_mat,
+                              Eigen::MatrixXd &y_expected) override {
     H_mat = getHmat(state);
     y_expected = getYExpected(state);
   }
@@ -32,7 +33,7 @@ class MavrosOdometry : public BaseSensor {
    * @param state Predicted state
    * @returns The H matrix at the provided state
    */
-  Eigen::MatrixXd getHmat(const Eigen::MatrixXd& state) {
+  Eigen::MatrixXd getHmat(const Eigen::MatrixXd &state) {
     // Calculate sines/cosines
     double sy = sin(state(6, 0));
     double cy = cos(state(6, 0));
@@ -92,7 +93,7 @@ class MavrosOdometry : public BaseSensor {
    * @param state Predicted state
    * @returns The expected measurement at the provided state
    */
-  Eigen::MatrixXd getYExpected(const Eigen::MatrixXd& state) {
+  Eigen::MatrixXd getYExpected(const Eigen::MatrixXd &state) {
     Eigen::Matrix3d Rot_mat =
         eulerToRotMat(state(6, 0), state(7, 0), state(8, 0));
 
@@ -107,3 +108,4 @@ class MavrosOdometry : public BaseSensor {
     return y_est;
   }
 };
+}  // namespace px4_ctrl
