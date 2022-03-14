@@ -24,7 +24,7 @@ class MavrosOdometry : public BaseSensor {
 
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
-  static const int measurement_size = 9;
+  static const int measurement_size = 10;
   static const int state_size = 13;
   static const int error_state_size = 12;
 
@@ -77,6 +77,7 @@ class MavrosOdometry : public BaseSensor {
 
     // Error state derivative of the state
     Eigen::Matrix<double, state_size, error_state_size> Xddx;
+    Xddx.setZero();
 
     // Position
     Xddx.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();

@@ -96,7 +96,7 @@ class StateObserver {
   bool is_initialized;
   static const int state_size = 13;
   static const int error_state_size = 12;
-  static const int odom_size = 9;
+  static const int odom_size = 10;
 
   // state = [x, y, z, xdot, ydot, zdot, qw, qx, qy, qz, fdx, fdy, fdz]T
   // error_state = [dpos, dvel, dtheta, dfd]T

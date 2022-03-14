@@ -353,6 +353,16 @@ void StateObserver::publishState(ros::Time time) {
   msg.disturbances.y = state.disturbances(1);
   msg.disturbances.z = state.disturbances(2);
 
+  // Euler Angles
+  tf::Quaternion q;
+  tf::quaternionMsgToTF(msg.pose.orientation, q);
+  double y, p, r;
+  tf::Matrix3x3(q).getEulerYPR(y, p, r);
+
+  msg.orientation_euler.x = r;
+  msg.orientation_euler.y = p;
+  msg.orientation_euler.z = y;
+
   // Publish message
   state_pub.publish(msg);
 }

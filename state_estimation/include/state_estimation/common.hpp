@@ -34,7 +34,7 @@ static inline num clipValue(const num &value, const num &l_bound,
  */
 static inline Eigen::Matrix3d toSkew(const Eigen::Vector3d v) {
   Eigen::Matrix3d s;
-  s << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0);
+  s << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
   return s;
 }
 
