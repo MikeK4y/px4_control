@@ -16,7 +16,7 @@
 #include "state_estimation/sensors/mavros_odometry_eskf.h"
 
 // Common
-#include "state_estimation/common.hpp"
+#include "state_estimation/common.h"
 
 /**
  * @brief State Observer Class. Implements an EKF to calculate an estimation of

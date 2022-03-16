@@ -6,7 +6,7 @@
 // ROS
 #include "tf/transform_datatypes.h"
 
-#include "state_estimation/common.hpp"
+#include "state_estimation/common.h"
 
 namespace px4_ctrl {
 class BaseSensor {
