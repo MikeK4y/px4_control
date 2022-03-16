@@ -3,6 +3,9 @@
 // Eigen
 #include <eigen3/Eigen/Dense>
 
+// ROS
+#include "tf/transform_datatypes.h"
+
 namespace px4_ctrl {
 
 struct eskf_state {
@@ -57,6 +60,50 @@ static inline Eigen::Matrix3d eulerToRotMat(const double &yaw,
       Rot_mat_tf[2][1], Rot_mat_tf[2][2];
 
   return Rot_mat;
+}
+
+/**
+ * @brief Gets the derivative of a rotation matrix with respect to qw
+ * @param q The rotation quaternion
+ * @returns The derivative of R with respect to qw
+ */
+static inline Eigen::Matrix3d dRdqw(const Eigen::Quaterniond q) {
+  Eigen::Matrix3d dR;
+  dR << q.w(), -q.z(), q.y(), q.z(), q.w(), -q.x(), -q.y(), q.x(), q.w();
+  return 2*dR;
+}
+
+/**
+ * @brief Gets the derivative of a rotation matrix with respect to qx
+ * @param q The rotation quaternion
+ * @returns The derivative of R with respect to qx
+ */
+static inline Eigen::Matrix3d dRdqx(const Eigen::Quaterniond q) {
+  Eigen::Matrix3d dR;
+  dR << q.x(), q.y(), q.z(), q.y(), -q.x(), -q.w(), q.z(), q.w(), -q.x();
+  return 2*dR;
+}
+
+/**
+ * @brief Gets the derivative of a rotation matrix with respect to qy
+ * @param q The rotation quaternion
+ * @returns The derivative of R with respect to qy
+ */
+static inline Eigen::Matrix3d dRdqy(const Eigen::Quaterniond q) {
+  Eigen::Matrix3d dR;
+  dR << -q.y(), q.x(), q.w(), q.x(), q.y(), q.z(), -q.w(), q.z(), -q.y();
+  return 2*dR;
+}
+
+/**
+ * @brief Gets the derivative of a rotation matrix with respect to qz
+ * @param q The rotation quaternion
+ * @returns The derivative of R with respect to qz
+ */
+static inline Eigen::Matrix3d dRdqz(const Eigen::Quaterniond q) {
+  Eigen::Matrix3d dR;
+  dR << -q.z(), -q.w(), q.x(), q.w(), -q.z(), q.y(), q.x(), q.y(), q.z();
+  return 2*dR;
 }
 
 }  // namespace px4_ctrl

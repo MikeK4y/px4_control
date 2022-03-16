@@ -35,28 +35,10 @@ class MavrosOdometry : public BaseSensor {
    */
   Eigen::MatrixXd getHmat(const eskf_state &state) {
     // Quaternion derivatives of R transpose
-    Eigen::Matrix3d R_w, R_x, R_y, R_z;
-
-    R_w << state.attitude.w(), state.attitude.z(), -state.attitude.y(),
-        -state.attitude.z(), state.attitude.w(), state.attitude.x(),
-        state.attitude.y(), -state.attitude.x(), state.attitude.w();
-
-    R_x << state.attitude.x(), state.attitude.y(), state.attitude.z(),
-        state.attitude.y(), -state.attitude.x(), state.attitude.w(),
-        state.attitude.z(), -state.attitude.w(), -state.attitude.x();
-
-    R_y << -state.attitude.y(), state.attitude.x(), -state.attitude.w(),
-        state.attitude.x(), state.attitude.y(), state.attitude.z(),
-        state.attitude.w(), state.attitude.z(), -state.attitude.y();
-
-    R_z << -state.attitude.z(), state.attitude.w(), state.attitude.x(),
-        -state.attitude.w(), -state.attitude.z(), state.attitude.y(),
-        state.attitude.x(), state.attitude.y(), state.attitude.z();
-
-    R_w = 2.0 * R_w;
-    R_x = 2.0 * R_x;
-    R_y = 2.0 * R_y;
-    R_z = 2.0 * R_z;
+    Eigen::Matrix3d R_w = dRdqw(state.attitude).transpose();
+    Eigen::Matrix3d R_x = dRdqx(state.attitude).transpose();
+    Eigen::Matrix3d R_y = dRdqy(state.attitude).transpose();
+    Eigen::Matrix3d R_z = dRdqz(state.attitude).transpose();
 
     // Construct H matrix
     Eigen::Matrix<double, measurement_size, state_size> H_mat;
@@ -101,6 +83,9 @@ class MavrosOdometry : public BaseSensor {
     Xddx(9, 6) = -0.5 * state.attitude.y();
     Xddx(9, 7) = 0.5 * state.attitude.x();
     Xddx(9, 8) = 0.5 * state.attitude.w();
+
+    // Disturbances
+    Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
     return H_mat * Xddx;
   }
