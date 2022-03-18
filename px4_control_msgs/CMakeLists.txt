@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(DIRECTORY msg
   FILES
   DroneState.msg
+  DroneStateMarker.msg
   Setpoint.msg
   Trajectory.msg
 )

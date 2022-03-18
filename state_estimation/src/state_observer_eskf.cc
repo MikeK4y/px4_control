@@ -22,7 +22,7 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   R_odom.setZero();
   R_odom.block(0, 0, 3, 3) = 0.05 * Eigen::Matrix3d::Identity();
   R_odom.block(3, 3, 3, 3) = 0.05 * Eigen::Matrix3d::Identity();
-  R_odom.block(6, 6, 3, 3) = 0.01 * Eigen::Matrix3d::Identity();
+  R_odom.block(6, 6, 4, 4) = 0.01 * Eigen::Matrix4d::Identity();
   odom_sensor = new MavrosOdometry(R_odom);
 
   // Initialize Parameters
