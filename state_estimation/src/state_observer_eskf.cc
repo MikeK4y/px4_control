@@ -133,7 +133,7 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
     Eigen::MatrixXd IKH_mat =
         Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
         K_mat * H_mat;
-    Eigen::MatrixXd P_mat =
+    P_mat =
         IKH_mat * P_pred_mat * IKH_mat.transpose() +
         K_mat * odom_sensor->getCurrentR() * K_mat.transpose();
     P_mat = 0.5 * (P_mat + P_mat.transpose());

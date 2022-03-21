@@ -7,3 +7,5 @@ std_msgs/Bool marker_found
 geometry_msgs/Pose marker_pose
 
 geometry_msgs/Vector3 orientation_euler
+
+float64[] covariance
