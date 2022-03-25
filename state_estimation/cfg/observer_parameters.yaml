@@ -1,0 +1,24 @@
+# Error covariance
+P_p: [0.1, 0.1, 0.1]
+P_v: [0.1, 0.1, 0.1]
+P_dq: [0.1, 0.1, 0.1]
+P_fd: [1.0, 1.0, 1.0]
+P_mp: [0.5, 0.5, 0.5]
+P_mdq: [0.1, 0.1, 0.1]
+
+# Process covariance
+Q_p: 0.1
+Q_v: 0.1
+Q_dq: 0.1
+Q_fd: 0.1
+Q_mp: 0.001
+Q_mdq: 0.001
+
+# Odometry covariance
+R_odom_p: [0.05, 0.05, 0.05]
+R_odom_v: [0.05, 0.05, 0.05]
+R_odom_q: [0.001, 0.001, 0.001, 0.001]
+
+# Marker covariance
+R_marker_p: [0.01, 0.01, 0.01]
+R_marker_q: [0.01, 0.01, 0.01, 0.01]

@@ -3,9 +3,6 @@
 // Eigen
 #include <eigen3/Eigen/Dense>
 
-// ROS
-#include "tf/transform_datatypes.h"
-
 namespace px4_ctrl {
 
 struct eskf_state {
@@ -13,6 +10,8 @@ struct eskf_state {
   Eigen::Vector3d velocity;
   Eigen::Quaterniond attitude;
   Eigen::Vector3d disturbances;
+  Eigen::Vector3d marker_position;
+  Eigen::Quaterniond marker_orientation;
 };
 
 /**
@@ -42,7 +41,7 @@ static inline Eigen::Matrix3d toSkew(const Eigen::Vector3d v) {
 }
 
 /**
- * @brief Gets the rotation matrix from the Euler angles
+ * @brief Gets the rotation matrix from the Euler angles (Z-Y-X)
  * @param yaw Yaw angle
  * @param pitch Pitch angle
  * @param roll Roll angle
@@ -51,13 +50,10 @@ static inline Eigen::Matrix3d toSkew(const Eigen::Vector3d v) {
 static inline Eigen::Matrix3d eulerToRotMat(const double &yaw,
                                             const double &pitch,
                                             const double &roll) {
-  tf::Matrix3x3 Rot_mat_tf;
-  Rot_mat_tf.setEulerYPR(yaw, pitch, roll);
-
   Eigen::Matrix3d Rot_mat;
-  Rot_mat << Rot_mat_tf[0][0], Rot_mat_tf[0][1], Rot_mat_tf[0][2],
-      Rot_mat_tf[1][0], Rot_mat_tf[1][1], Rot_mat_tf[1][2], Rot_mat_tf[2][0],
-      Rot_mat_tf[2][1], Rot_mat_tf[2][2];
+  Rot_mat = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
+            Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
+            Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
 
   return Rot_mat;
 }
@@ -70,7 +66,7 @@ static inline Eigen::Matrix3d eulerToRotMat(const double &yaw,
 static inline Eigen::Matrix3d dRdqw(const Eigen::Quaterniond q) {
   Eigen::Matrix3d dR;
   dR << q.w(), -q.z(), q.y(), q.z(), q.w(), -q.x(), -q.y(), q.x(), q.w();
-  return 2*dR;
+  return 2 * dR;
 }
 
 /**
@@ -81,7 +77,7 @@ static inline Eigen::Matrix3d dRdqw(const Eigen::Quaterniond q) {
 static inline Eigen::Matrix3d dRdqx(const Eigen::Quaterniond q) {
   Eigen::Matrix3d dR;
   dR << q.x(), q.y(), q.z(), q.y(), -q.x(), -q.w(), q.z(), q.w(), -q.x();
-  return 2*dR;
+  return 2 * dR;
 }
 
 /**
@@ -92,7 +88,7 @@ static inline Eigen::Matrix3d dRdqx(const Eigen::Quaterniond q) {
 static inline Eigen::Matrix3d dRdqy(const Eigen::Quaterniond q) {
   Eigen::Matrix3d dR;
   dR << -q.y(), q.x(), q.w(), q.x(), q.y(), q.z(), -q.w(), q.z(), -q.y();
-  return 2*dR;
+  return 2 * dR;
 }
 
 /**
@@ -103,7 +99,95 @@ static inline Eigen::Matrix3d dRdqy(const Eigen::Quaterniond q) {
 static inline Eigen::Matrix3d dRdqz(const Eigen::Quaterniond q) {
   Eigen::Matrix3d dR;
   dR << -q.z(), -q.w(), q.x(), q.w(), -q.z(), q.y(), q.x(), q.y(), q.z();
-  return 2*dR;
+  return 2 * dR;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to pw
+ * @param q The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to pw
+ */
+static inline Eigen::Vector4d dpqdpw(const Eigen::Quaterniond q) {
+  Eigen::Vector4d dpq;
+  dpq << q.w(), q.x(), q.y(), q.z();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to px
+ * @param q The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to px
+ */
+static inline Eigen::Vector4d dpqdpx(const Eigen::Quaterniond q) {
+  Eigen::Vector4d dpq;
+  dpq << -q.x(), q.w(), -q.z(), q.y();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to py
+ * @param q The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to py
+ */
+static inline Eigen::Vector4d dpqdpy(const Eigen::Quaterniond q) {
+  Eigen::Vector4d dpq;
+  dpq << -q.y(), q.z(), q.w(), -q.x();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to pz
+ * @param q The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to pz
+ */
+static inline Eigen::Vector4d dpqdpz(const Eigen::Quaterniond q) {
+  Eigen::Vector4d dpq;
+  dpq << -q.z(), -q.y(), q.x(), q.w();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to qw
+ * @param p The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to qw
+ */
+static inline Eigen::Vector4d dpqdqw(const Eigen::Quaterniond p) {
+  Eigen::Vector4d dpq;
+  dpq << p.w(), p.x(), p.y(), p.z();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to qx
+ * @param p The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to qx
+ */
+static inline Eigen::Vector4d dpqdqx(const Eigen::Quaterniond p) {
+  Eigen::Vector4d dpq;
+  dpq << -p.x(), p.w(), p.z(), -p.y();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to qy
+ * @param p The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to qy
+ */
+static inline Eigen::Vector4d dpqdqy(const Eigen::Quaterniond p) {
+  Eigen::Vector4d dpq;
+  dpq << -p.y(), -p.z(), p.w(), p.x();
+  return dpq;
+}
+
+/**
+ * @brief Gets the derivative of the quaternion product pq with respect to qz
+ * @param p The rotation quaternion
+ * @returns The derivative of the quaternion product pq with respect to qz
+ */
+static inline Eigen::Vector4d dpqdqz(const Eigen::Quaterniond p) {
+  Eigen::Vector4d dpq;
+  dpq << -p.z(), p.y(), -p.x(), p.w();
+  return dpq;
 }
 
 }  // namespace px4_ctrl
