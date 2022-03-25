@@ -14,8 +14,7 @@ class MavrosOdometry : public BaseSensor {
    * @param H_mat Sensor's H matrix
    * @param y_pred Sensor's expected measurement at the predicted state
    */
-  virtual void correctionData(const Eigen::MatrixXd &state,
-                              Eigen::MatrixXd &H_mat,
+  virtual void correctionData(const eskf_state &state, Eigen::MatrixXd &H_mat,
                               Eigen::MatrixXd &y_expected) override {
     H_mat = getHmat(state);
     y_expected = getYExpected(state);
@@ -25,22 +24,21 @@ class MavrosOdometry : public BaseSensor {
 
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
-  static const int measurement_size = 9;
-  static const int state_size = 12;
+  static const int measurement_size = 10;
+  static const int state_size = 13;
+  static const int error_state_size = 12;
 
   /**
    * @brief Calculates the H matrix using the predicted state
    * @param state Predicted state
    * @returns The H matrix at the provided state
    */
-  Eigen::MatrixXd getHmat(const Eigen::MatrixXd &state) {
-    // Calculate sines/cosines
-    double sy = sin(state(6, 0));
-    double cy = cos(state(6, 0));
-    double sp = sin(state(7, 0));
-    double cp = cos(state(7, 0));
-    double sr = sin(state(8, 0));
-    double cr = cos(state(8, 0));
+  Eigen::MatrixXd getHmat(const eskf_state &state) {
+    // Quaternion derivatives of R transpose
+    Eigen::Matrix3d R_w = dRdqw(state.attitude).transpose();
+    Eigen::Matrix3d R_x = dRdqx(state.attitude).transpose();
+    Eigen::Matrix3d R_y = dRdqy(state.attitude).transpose();
+    Eigen::Matrix3d R_z = dRdqz(state.attitude).transpose();
 
     // Construct H matrix
     Eigen::Matrix<double, measurement_size, state_size> H_mat;
@@ -50,42 +48,46 @@ class MavrosOdometry : public BaseSensor {
     H_mat.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
 
     // Velocity
-    // h4 = cycp*xdot + sycp*ydot - sp*zdot
-    H_mat(3, 3) = cy * cp;
-    H_mat(3, 4) = sy * cp;
-    H_mat(3, 5) = -sp;
-    H_mat(3, 6) = -sy * cp * state(3, 0) + cy * cp * state(4, 0);
-    H_mat(3, 7) =
-        -cy * sp * state(3, 0) - sy * sp * state(4, 0) - cp * state(5, 0);
-
-    // h5 = (cyspsr - sycr)*xdot + (syspsr + cycr)*ydot + cpsr*zdot
-    H_mat(4, 3) = cy * sp * sr - sy * cr;
-    H_mat(4, 4) = sy * sp * sr + cy * cr;
-    H_mat(4, 5) = cp * sr;
-    H_mat(4, 6) = -(sy * sp * sr + cy * cr) * state(3, 0) +
-                  (cy * sp * sr - sy * cr) * state(4, 0);
-    H_mat(4, 7) = (cy * cp * sr) * state(3, 0) + (sy * cp * sr) * state(4, 0) -
-                  sp * sr * state(5, 0);
-    H_mat(4, 8) = (cy * sp * cr + sy * sr) * state(3, 0) +
-                  (sy * sp * cr - cy * sr) * state(4, 0) +
-                  cp * cr * state(5, 0);
-
-    // h6 = (cyspcr + sysr)*xdot + (syspcr - cycr)*ydot + cpcr*zdot
-    H_mat(5, 3) = cy * sp * cr + sy * sr;
-    H_mat(5, 4) = sy * sp * cr - cy * cr;
-    H_mat(5, 5) = cp * cr;
-    H_mat(5, 6) = -(sy * sp * cr - cy * sr) * state(3, 0) +
-                  (cy * sp * cr + sy * sr) * state(4, 0);
-    H_mat(5, 7) = (cy * cp * cr) * state(3, 0) + (sy * cp * cr) * state(4, 0) -
-                  sp * cr * state(5, 0);
-    H_mat(5, 8) = -(cy * sp * sr - sy * cr) * state(3, 0) -
-                  (sy * sp * sr + cy * cr) * state(4, 0) -
-                  cp * sr * state(5, 0);
+    H_mat.block(3, 3, 3, 3) = state.attitude.toRotationMatrix().transpose();
+    H_mat.block(3, 6, 3, 1) = R_w * state.velocity;
+    H_mat.block(3, 7, 3, 1) = R_x * state.velocity;
+    H_mat.block(3, 8, 3, 1) = R_y * state.velocity;
+    H_mat.block(3, 9, 3, 1) = R_z * state.velocity;
 
     // Attitude
-    H_mat.block(6, 6, 3, 3) = Eigen::Matrix3d::Identity();
+    H_mat.block(6, 6, 4, 4) = Eigen::Matrix4d::Identity();
 
-    return H_mat;
+    // Error state derivative of the state
+    Eigen::Matrix<double, state_size, error_state_size> Xddx;
+    Xddx.setZero();
+
+    // Position
+    Xddx.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
+
+    // Velocity
+    Xddx.block(3, 3, 3, 3) = Eigen::Matrix3d::Identity();
+
+    // Attitude
+    Xddx(6, 6) = -0.5 * state.attitude.x();
+    Xddx(6, 7) = -0.5 * state.attitude.y();
+    Xddx(6, 8) = -0.5 * state.attitude.z();
+
+    Xddx(7, 6) = 0.5 * state.attitude.w();
+    Xddx(7, 7) = -0.5 * state.attitude.z();
+    Xddx(7, 8) = 0.5 * state.attitude.y();
+
+    Xddx(8, 6) = 0.5 * state.attitude.z();
+    Xddx(8, 7) = 0.5 * state.attitude.w();
+    Xddx(8, 8) = -0.5 * state.attitude.x();
+
+    Xddx(9, 6) = -0.5 * state.attitude.y();
+    Xddx(9, 7) = 0.5 * state.attitude.x();
+    Xddx(9, 8) = 0.5 * state.attitude.w();
+
+    // Disturbances
+    Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
+
+    return H_mat * Xddx;
   }
 
   /**
@@ -93,17 +95,19 @@ class MavrosOdometry : public BaseSensor {
    * @param state Predicted state
    * @returns The expected measurement at the provided state
    */
-  Eigen::MatrixXd getYExpected(const Eigen::MatrixXd &state) {
-    Eigen::Matrix3d Rot_mat =
-        eulerToRotMat(state(6, 0), state(7, 0), state(8, 0));
+  Eigen::MatrixXd getYExpected(const eskf_state &state) {
+    Eigen::Matrix3d R_mat = state.attitude.toRotationMatrix();
 
-    Eigen::Vector3d v_w = Rot_mat.transpose() * state.block(3, 0, 3, 1);
+    Eigen::Vector3d v_w = R_mat.transpose() * state.velocity;
 
     Eigen::Matrix<double, measurement_size, 1> y_est;
 
-    y_est.segment(0, 3) = state.block(0, 0, 3, 1);
+    y_est.segment(0, 3) = state.position;
     y_est.segment(3, 3) = v_w;
-    y_est.segment(6, 3) = state.block(6, 0, 3, 1);
+    y_est(6) = state.attitude.w();
+    y_est(7) = state.attitude.x();
+    y_est(8) = state.attitude.y();
+    y_est(9) = state.attitude.z();
 
     return y_est;
   }

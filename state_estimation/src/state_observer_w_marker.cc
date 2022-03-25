@@ -1,8 +1,9 @@
-#include "state_estimation/state_observer.h"
+#include "state_estimation/state_observer_w_marker.h"
 
 #include <future>
 
 // ROS
+#include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Quaternion.h"
 #include "geometry_msgs/Vector3.h"
 #include "tf/transform_datatypes.h"
@@ -14,16 +15,21 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
                           &StateObserver::odomCallback, this);
   ctrl_sub = nh.subscribe("/mavros/setpoint_raw/attitude", 1,
                           &StateObserver::ctrlCallback, this);
+  marker_sub =
+      nh.subscribe("/marker/pose", 1, &StateObserver::markerCallback, this);
 
   // Setup Publisher
-  state_pub = nh.advertise<px4_control_msgs::DroneState>("/drone_state", 1);
+  state_pub =
+      nh.advertise<px4_control_msgs::DroneStateMarker>("/drone_state", 1);
 
   // Initialize Parameters
   loadParameters();
   is_initialized = false;
+  marker_found = false;
 
-  // Initialize Sensor
+  // Initialize Sensors
   odom_sensor = new MavrosOdometry(R_odom);
+  marker_sensor = new MarkerPose(R_marker);
 
   /** TODO: Not sure about the initialization of the time stamp */
   past_cmd = Eigen::Vector4d::Zero();
@@ -37,6 +43,7 @@ void StateObserver::loadParameters() {
   // Create private nodehandle to load parameters
   ros::NodeHandle nh_pvt("~");
 
+  // Drone model parameters
   nh_pvt.param("t_pitch", t_pitch, 1.0);
   nh_pvt.param("k_pitch", k_pitch, 1.0);
 
@@ -80,6 +87,11 @@ void StateObserver::loadParameters() {
   nh_pvt.getParam("R_odom_v", R_odom_v);
   nh_pvt.getParam("R_odom_q", R_odom_q);
 
+  // Marker covariance
+  std::vector<double> R_marker_p, R_marker_q;
+  nh_pvt.getParam("R_marker_p", R_marker_p);
+  nh_pvt.getParam("R_marker_q", R_marker_q);
+
   // Initialize matrices
   P_mat.setZero();
   P_mat.block(0, 0, 3, 3).diagonal() = Eigen::Vector3d(P_p[0], P_p[1], P_p[2]);
@@ -108,6 +120,12 @@ void StateObserver::loadParameters() {
       Eigen::Vector3d(R_odom_v[0], R_odom_v[1], R_odom_v[2]);
   R_odom.block(6, 6, 4, 4).diagonal() =
       Eigen::Vector4d(R_odom_q[0], R_odom_q[1], R_odom_q[2], R_odom_q[3]);
+
+  R_marker.setZero();
+  R_marker.block(0, 0, 3, 3).diagonal() =
+      Eigen::Vector3d(R_marker_p[0], R_marker_p[1], R_marker_p[2]);
+  R_marker.block(3, 3, 4, 4).diagonal() = Eigen::Vector4d(
+      R_marker_q[0], R_marker_q[1], R_marker_q[2], R_marker_q[3]);
 }
 
 // Odometry Callback
@@ -143,42 +161,74 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
 
     is_initialized = true;
   } else {
-    // Prepare measurement
-    Eigen::Matrix<double, odom_size, 1> y_odom;
-    y_odom << msg.pose.pose.position.x, msg.pose.pose.position.y,
-        msg.pose.pose.position.z, msg.twist.twist.linear.x,
-        msg.twist.twist.linear.y, msg.twist.twist.linear.z,
-        msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
-        msg.pose.pose.orientation.y, msg.pose.pose.orientation.z;
+    /** TODO: There are big gaps in the odometry messages. In this case don't
+     * propagate the state because it leads to large estimation errors. It's
+     * better to re-initialize keeping the old error covariance*/
+    double dt = (msg.header.stamp - past_state_time).toSec();
+    if (dt > 0.5) {
+      ROS_WARN("Large gap detected. Re-initializing");
+      // Time
+      past_state_time = msg.header.stamp;
 
-    // Run prediction and update time
-    predict(msg.header.stamp);
+      // Position
+      state.position(0) = msg.pose.pose.position.x;
+      state.position(1) = msg.pose.pose.position.y;
+      state.position(2) = msg.pose.pose.position.z;
 
-    // Run correction
-    Eigen::MatrixXd H_mat(9, 12);
-    Eigen::MatrixXd y_expected(9, 1);
-    odom_sensor->correctionData(state_pred, H_mat, y_expected);
+      // Attitude
+      state.attitude = Eigen::Quaterniond(
+          msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+          msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
-    Eigen::MatrixXd S =
-        H_mat * P_pred_mat * H_mat.transpose() + odom_sensor->getCurrentR();
-    Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S.inverse();
+      // Velocity
+      Eigen::Vector3d v_body(msg.twist.twist.linear.x, msg.twist.twist.linear.y,
+                             msg.twist.twist.linear.z);
+      Eigen::Vector3d v_world = state.attitude.toRotationMatrix() * v_body;
 
-    error_state = K_mat * (y_odom - y_expected);
+      state.velocity(0) = v_world(0);
+      state.velocity(1) = v_world(1);
+      state.velocity(2) = v_world(2);
 
-    // Update state
-    std::future<void> state_update_f =
-        std::async(std::launch::async, &StateObserver::correctState, this);
+      // Use the same error covariance but increase it
+      P_mat = P_mat + 30 * dt * Q_mat;
+    } else {
+      // Prepare measurement
+      Eigen::Matrix<double, odom_size, 1> y_odom;
+      y_odom << msg.pose.pose.position.x, msg.pose.pose.position.y,
+          msg.pose.pose.position.z, msg.twist.twist.linear.x,
+          msg.twist.twist.linear.y, msg.twist.twist.linear.z,
+          msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+          msg.pose.pose.orientation.y, msg.pose.pose.orientation.z;
 
-    // Update P marix and make sure it's symmetric
-    Eigen::MatrixXd IKH_mat =
-        Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
-        K_mat * H_mat;
-    P_mat = IKH_mat * P_pred_mat;
-    P_mat = 0.5 * (P_mat + P_mat.transpose());
+      // Run prediction and update time
+      predict(msg.header.stamp);
 
-    // Publish state
-    state_update_f.wait();
-    publishState(msg.header.stamp);
+      // Run correction
+      Eigen::MatrixXd H_mat(9, 12);
+      Eigen::MatrixXd y_expected(9, 1);
+      odom_sensor->correctionData(state_pred, H_mat, y_expected);
+
+      Eigen::MatrixXd S =
+          H_mat * P_pred_mat * H_mat.transpose() + odom_sensor->getCurrentR();
+      Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S.inverse();
+
+      error_state = K_mat * (y_odom - y_expected);
+
+      // Update state
+      std::future<void> state_update_f =
+          std::async(std::launch::async, &StateObserver::correctState, this);
+
+      // Update P marix and make sure it's symmetric
+      Eigen::MatrixXd IKH_mat =
+          Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
+          K_mat * H_mat;
+      P_mat = IKH_mat * P_pred_mat;
+      P_mat = 0.5 * (P_mat + P_mat.transpose());
+
+      // Publish state
+      state_update_f.wait();
+      publishState(msg.header.stamp);
+    }
   }
 }
 
@@ -199,6 +249,74 @@ void StateObserver::ctrlCallback(const mavros_msgs::AttitudeTarget &msg) {
   latest_cmd_time = msg.header.stamp;
 }
 
+// Marker callback
+void StateObserver::markerCallback(const geometry_msgs::PoseStamped &msg) {
+  if (is_initialized) {
+    if (!marker_found) {
+      // Initialize marker position
+      Eigen::Quaterniond q_meas(msg.pose.orientation.w, msg.pose.orientation.x,
+                                msg.pose.orientation.y, msg.pose.orientation.z);
+      Eigen::Vector3d p_meas(msg.pose.position.x, msg.pose.position.y,
+                             msg.pose.position.z);
+
+      state.marker_orientation = state.attitude * q_meas;
+      state.marker_position =
+          state.position + state.attitude.toRotationMatrix() * p_meas;
+
+      marker_found = true;
+
+      last_marker_q = q_meas;
+    } else {
+      // Prepare measurement
+      Eigen::Quaterniond q_meas(msg.pose.orientation.w, msg.pose.orientation.x,
+                                msg.pose.orientation.y, msg.pose.orientation.z);
+      Eigen::Quaterniond dq = last_marker_q.inverse() * q_meas;
+
+      if (dq.w() < 0) {
+        q_meas.w() = -q_meas.w();
+        q_meas.x() = -q_meas.x();
+        q_meas.y() = -q_meas.y();
+        q_meas.z() = -q_meas.z();
+      }
+
+      last_marker_q = q_meas;
+
+      Eigen::Matrix<double, marker_size, 1> y_marker;
+      y_marker << msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,
+          q_meas.w(), q_meas.x(), q_meas.y(), q_meas.z();
+
+      // Run prediction and update time
+      predict(msg.header.stamp);
+
+      // Run correction
+      Eigen::MatrixXd H_mat(7, 18);
+      Eigen::MatrixXd y_expected(7, 1);
+      marker_sensor->correctionData(state_pred, H_mat, y_expected);
+
+      Eigen::MatrixXd S =
+          H_mat * P_pred_mat * H_mat.transpose() + marker_sensor->getCurrentR();
+      Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S.inverse();
+
+      error_state = K_mat * (y_marker - y_expected);
+      // Zero out any change to the drone's pitch and roll that might affect the
+      // drone's stability
+      error_state(6) = 0.0;
+      error_state(7) = 0.0;
+
+      // Update state
+      std::future<void> state_update_f =
+          std::async(std::launch::async, &StateObserver::correctState, this);
+
+      // Update P marix and make sure it's symmetric
+      Eigen::MatrixXd IKH_mat =
+          Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
+          K_mat * H_mat;
+      P_mat = IKH_mat * P_pred_mat;
+      P_mat = 0.5 * (P_mat + P_mat.transpose());
+    }
+  }
+}
+
 void StateObserver::predict(ros::Time pred_time) {
   // Find input for the prediction time step
   /** TODO: Doesn't work as I was expecting. In the test bag files the cmds
@@ -206,29 +324,37 @@ void StateObserver::predict(ros::Time pred_time) {
   Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
   double dt = (pred_time - past_state_time).toSec();
 
-  // If there's been a while without a new cmd set them to zero
-  if ((pred_time - latest_cmd_time).toSec() < 0.5) {
-    double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
-    double dt_p = dt_l < dt ? dt - dt_l : 0.0;
+  /** TODO: There's a chance that the marker arrives with a stamp prior to the
+   * latest odometry thus making the dt negative. In this case skip prediction.
+   * Using a buffer and rerun the filter will be a much better solution*/
+  if (dt > 0.0) {
+    // If there's been a while without a new cmd set them to zero
+    if ((pred_time - latest_cmd_time).toSec() < 0.5) {
+      double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
+      double dt_p = dt_l < dt ? dt - dt_l : 0.0;
 
-    cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
+      cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
+    }
+
+    // Run error covariance prediction asynchronously
+    std::future<void> p_pred_update_f =
+        std::async(std::launch::async, &StateObserver::updatePpred, this,
+                   std::cref(dt), std::cref(cmd));
+
+    // Use Runge Kutta 4 to propagate state
+    Eigen::VectorXd k1 = getSystemDerivative(state, cmd);
+    Eigen::VectorXd k2 =
+        getSystemDerivative(addUpdate(state, 0.5 * dt * k1), cmd);
+    Eigen::VectorXd k3 =
+        getSystemDerivative(addUpdate(state, 0.5 * dt * k2), cmd);
+    Eigen::VectorXd k4 = getSystemDerivative(addUpdate(state, dt * k3), cmd);
+
+    state_pred = addUpdate(state, dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6);
+    past_state_time = pred_time;
+  } else {
+    state_pred = state;
+    P_pred_mat = P_mat + Q_mat;
   }
-
-  // Run error covariance prediction asynchronously
-  std::future<void> p_pred_update_f =
-      std::async(std::launch::async, &StateObserver::updatePpred, this,
-                 std::cref(dt), std::cref(cmd));
-
-  // Use Runge Kutta 4 to propagate state
-  Eigen::VectorXd k1 = getSystemDerivative(state, cmd);
-  Eigen::VectorXd k2 =
-      getSystemDerivative(addUpdate(state, 0.5 * dt * k1), cmd);
-  Eigen::VectorXd k3 =
-      getSystemDerivative(addUpdate(state, 0.5 * dt * k2), cmd);
-  Eigen::VectorXd k4 = getSystemDerivative(addUpdate(state, dt * k3), cmd);
-
-  state_pred = addUpdate(state, dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6);
-  past_state_time = pred_time;
 }
 
 Eigen::VectorXd StateObserver::getSystemDerivative(const eskf_state &state,
@@ -291,6 +417,8 @@ eskf_state StateObserver::addUpdate(const eskf_state &state,
                          state.attitude.z() + state_update(9));
   updated_state.attitude.normalize();
   updated_state.disturbances = state.disturbances;
+  updated_state.marker_position = state.marker_position;
+  updated_state.marker_orientation = state.marker_orientation;
 
   return updated_state;
 }
@@ -331,6 +459,12 @@ void StateObserver::updatePpred(const double &dt, const Eigen::Vector4d &cmd) {
   // Disturbances
   F_mat.block(9, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
+  // Marker position
+  F_mat.block(12, 12, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Marker orientation
+  F_mat.block(15, 15, 3, 3) = Eigen::Matrix3d::Identity();
+
   // Update P_pred
   P_pred_mat = F_mat * P_mat * F_mat.transpose() + Q_mat;
 }
@@ -368,10 +502,30 @@ void StateObserver::correctState() {
   state.disturbances(2) =
       clipValue(state_pred.disturbances(2) + error_state(11),
                 -disturbance_limit, disturbance_limit);
+
+  if (marker_found) {
+    // Marker position
+    state.marker_position(0) = state_pred.marker_position(0) + error_state(12);
+    state.marker_position(1) = state_pred.marker_position(1) + error_state(13);
+    state.marker_position(2) = state_pred.marker_position(2) + error_state(14);
+
+    // Marker orientation
+    Eigen::Vector3d thetas_marker;
+    thetas_marker << error_state(15), error_state(16), error_state(17);
+    angle = thetas_marker.norm();
+    if (angle > 0) {
+      thetas_marker = thetas_marker / angle;
+      Eigen::Quaterniond dq_marker =
+          Eigen::Quaterniond(Eigen::AngleAxisd(angle, thetas_marker));
+      state.marker_orientation = state_pred.marker_orientation * dq_marker;
+    } else {
+      state.marker_orientation = state_pred.marker_orientation;
+    }
+  }
 }
 
 void StateObserver::publishState(ros::Time time) {
-  px4_control_msgs::DroneState msg;
+  px4_control_msgs::DroneStateMarker msg;
 
   // Header
   msg.header.stamp = time;
@@ -396,6 +550,20 @@ void StateObserver::publishState(ros::Time time) {
   msg.disturbances.x = state.disturbances(0);
   msg.disturbances.y = state.disturbances(1);
   msg.disturbances.z = state.disturbances(2);
+
+  // Marker
+  msg.marker_found.data = marker_found;
+
+  if (marker_found) {
+    msg.marker_pose.position.x = state.marker_position(0);
+    msg.marker_pose.position.y = state.marker_position(1);
+    msg.marker_pose.position.z = state.marker_position(2);
+
+    msg.marker_pose.orientation.w = state.marker_orientation.w();
+    msg.marker_pose.orientation.x = state.marker_orientation.x();
+    msg.marker_pose.orientation.y = state.marker_orientation.y();
+    msg.marker_pose.orientation.z = state.marker_orientation.z();
+  }
 
   // Error covariance
   for (size_t i = 0; i < P_mat.rows(); i++) {

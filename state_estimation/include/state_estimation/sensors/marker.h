@@ -1,11 +1,11 @@
-#include "state_estimation/sensors/base_sensor_eskf.h"
+#include "state_estimation/sensors/base_sensor.h"
 
 namespace px4_ctrl {
-class MavrosOdometry : public BaseSensor {
+class MarkerPose : public BaseSensor {
  public:
-  MavrosOdometry() {}
-  MavrosOdometry(Eigen::MatrixXd R_mat) : R_mat_nom(R_mat), R_mat_cur(R_mat) {}
-  ~MavrosOdometry() {}
+  MarkerPose() {}
+  MarkerPose(Eigen::MatrixXd R_mat) : R_mat_nom(R_mat), R_mat_cur(R_mat) {}
+  ~MarkerPose() {}
 
   /**
    * @brief Returns the H matrix and expected sensor measurement for the
@@ -24,9 +24,9 @@ class MavrosOdometry : public BaseSensor {
 
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
-  static const int measurement_size = 10;
-  static const int state_size = 13;
-  static const int error_state_size = 12;
+  static const int measurement_size = 7;
+  static const int state_size = 20;
+  static const int error_state_size = 18;
 
   /**
    * @brief Calculates the H matrix using the predicted state
@@ -44,18 +44,28 @@ class MavrosOdometry : public BaseSensor {
     Eigen::Matrix<double, measurement_size, state_size> H_mat;
     H_mat.setZero();
 
-    // Position
-    H_mat.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
+    // Drone Position
+    H_mat.block(0, 0, 3, 3) = -state.attitude.toRotationMatrix().transpose();
 
-    // Velocity
-    H_mat.block(3, 3, 3, 3) = state.attitude.toRotationMatrix().transpose();
-    H_mat.block(3, 6, 3, 1) = R_w * state.velocity;
-    H_mat.block(3, 7, 3, 1) = R_x * state.velocity;
-    H_mat.block(3, 8, 3, 1) = R_y * state.velocity;
-    H_mat.block(3, 9, 3, 1) = R_z * state.velocity;
+    // Drone Attitude
+    H_mat.block(0, 6, 3, 1) = R_w * (state.marker_position - state.position);
+    H_mat.block(0, 7, 3, 1) = R_x * (state.marker_position - state.position);
+    H_mat.block(0, 8, 3, 1) = R_y * (state.marker_position - state.position);
+    H_mat.block(0, 9, 3, 1) = R_z * (state.marker_position - state.position);
 
-    // Attitude
-    H_mat.block(6, 6, 4, 4) = Eigen::Matrix4d::Identity();
+    H_mat.block(3, 6, 4, 1) = dpqdpw(state.marker_orientation);
+    H_mat.block(3, 7, 4, 1) = -dpqdpx(state.marker_orientation);
+    H_mat.block(3, 8, 4, 1) = -dpqdpy(state.marker_orientation);
+    H_mat.block(3, 9, 4, 1) = -dpqdpz(state.marker_orientation);
+
+    // Marker Position
+    H_mat.block(0, 13, 3, 3) = state.attitude.toRotationMatrix().transpose();
+
+    // Marker Orientation
+    H_mat.block(3, 16, 4, 1) = dpqdqw(state.attitude.inverse());
+    H_mat.block(3, 17, 4, 1) = dpqdqx(state.attitude.inverse());
+    H_mat.block(3, 18, 4, 1) = dpqdqy(state.attitude.inverse());
+    H_mat.block(3, 19, 4, 1) = dpqdqz(state.attitude.inverse());
 
     // Error state derivative of the state
     Eigen::Matrix<double, state_size, error_state_size> Xddx;
@@ -87,6 +97,26 @@ class MavrosOdometry : public BaseSensor {
     // Disturbances
     Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
+    // Marker position
+    Xddx.block(13, 12, 3, 3) = Eigen::Matrix3d::Identity();
+
+    // Marker orientaion
+    Xddx(16, 15) = -0.5 * state.marker_orientation.x();
+    Xddx(16, 16) = -0.5 * state.marker_orientation.y();
+    Xddx(16, 17) = -0.5 * state.marker_orientation.z();
+
+    Xddx(17, 15) = 0.5 * state.marker_orientation.w();
+    Xddx(17, 16) = -0.5 * state.marker_orientation.z();
+    Xddx(17, 17) = 0.5 * state.marker_orientation.y();
+
+    Xddx(18, 15) = 0.5 * state.marker_orientation.z();
+    Xddx(18, 16) = 0.5 * state.marker_orientation.w();
+    Xddx(18, 17) = -0.5 * state.marker_orientation.x();
+
+    Xddx(19, 15) = -0.5 * state.marker_orientation.y();
+    Xddx(19, 16) = 0.5 * state.marker_orientation.x();
+    Xddx(19, 17) = 0.5 * state.marker_orientation.w();
+
     return H_mat * Xddx;
   }
 
@@ -96,18 +126,20 @@ class MavrosOdometry : public BaseSensor {
    * @returns The expected measurement at the provided state
    */
   Eigen::MatrixXd getYExpected(const eskf_state &state) {
+    Eigen::Quaterniond q_meas =
+        state.attitude.inverse() * state.marker_orientation;
     Eigen::Matrix3d R_mat = state.attitude.toRotationMatrix();
 
-    Eigen::Vector3d v_w = R_mat.transpose() * state.velocity;
+    Eigen::Vector3d p_meas =
+        R_mat.transpose() * (state.marker_position - state.position);
 
     Eigen::Matrix<double, measurement_size, 1> y_est;
 
-    y_est.segment(0, 3) = state.position;
-    y_est.segment(3, 3) = v_w;
-    y_est(6) = state.attitude.w();
-    y_est(7) = state.attitude.x();
-    y_est(8) = state.attitude.y();
-    y_est(9) = state.attitude.z();
+    y_est.segment(0, 3) = p_meas;
+    y_est(3) = q_meas.w();
+    y_est(4) = q_meas.x();
+    y_est(5) = q_meas.y();
+    y_est(6) = q_meas.z();
 
     return y_est;
   }

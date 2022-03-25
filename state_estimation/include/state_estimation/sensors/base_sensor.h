@@ -6,7 +6,7 @@
 // ROS
 #include "tf/transform_datatypes.h"
 
-#include "state_estimation/common.hpp"
+#include "state_estimation/common.h"
 
 namespace px4_ctrl {
 class BaseSensor {
@@ -22,7 +22,7 @@ class BaseSensor {
    * @param H_mat Sensor's H matrix
    * @param y_pred Sensor's expected measurement at the predicted state
    */
-  virtual void correctionData(const Eigen::MatrixXd &state_pred,
+  virtual void correctionData(const eskf_state &state_pred,
                               Eigen::MatrixXd &H_mat,
                               Eigen::MatrixXd &y_expected) {}
 

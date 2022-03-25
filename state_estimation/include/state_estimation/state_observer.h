@@ -6,6 +6,7 @@
 // ROS messages
 #include <mavros_msgs/AttitudeTarget.h>
 #include <nav_msgs/Odometry.h>
+
 #include "px4_control_msgs/DroneState.h"
 
 // Eigen
@@ -13,6 +14,9 @@
 
 // Sensors
 #include "state_estimation/sensors/mavros_odometry.h"
+
+// Common
+#include "state_estimation/common.h"
 
 /**
  * @brief State Observer Class. Implements an EKF to calculate an estimation of
@@ -52,6 +56,23 @@ class StateObserver {
    */
   void predict(ros::Time pred_time);
 
+  /**
+   * @brief Calculates the system's derivative at a specific state and input
+   * @param state System state
+   * @param input Input to the system
+   * @returns System's derivative
+   */
+  Eigen::VectorXd getSystemDerivative(const eskf_state &state,
+                                      const Eigen::Vector4d &cmd);
+
+  /**
+   * @brief Adds the update to the state
+   * @param state_update System's state update
+   * @returns Updated state
+   */
+  eskf_state addUpdate(const eskf_state &state,
+                       const Eigen::VectorXd &state_update);
+
   /** @brief Updates the P_pred_mat for the prediction step
    * @param dt Time step for prediction
    * @param cmd The input for the prediction step
@@ -59,19 +80,9 @@ class StateObserver {
   void updatePpred(const double &dt, const Eigen::Vector4d &cmd);
 
   /**
-   * @brief Gets the rotation matrix from the Euler angles
-   * @param yaw Yaw angle
-   * @param pitch Pitch angle
-   * @param roll Roll angle
-   * @returns Rotation matrix
-   */
-  Eigen::Matrix3d yprToRotMat(const double &yaw, const double &pitch,
-                              const double &roll);
-
-  /**
    * @brief Updates the system state using the estimated state
    */
-  void updateState();
+  void correctState();
 
   /**
    * @brief Publishes the current state estimate
@@ -80,35 +91,21 @@ class StateObserver {
    */
   void publishState(ros::Time time);
 
-  /**
-   * @brief Sets an angle in the [-pi, pi) range
-   * @param angle Self explanatory
-   */
-  double checkAngle(const double &angle);
-
-  /**
-   * @brief Clips a value between bounds
-   * @param value The value to be clipped
-   * @param l_bound Lower bound
-   * @param u_bound Upper bound
-   */
-  template <class num>
-  num clipValue(const num &value, const num &l_bound, const num &u_bound);
-
   // Observer data
   ros::Time past_state_time;
   bool is_initialized;
-  static const int state_size = 12;
-  static const int odom_size = 9;
+  static const int state_size = 13;
+  static const int error_state_size = 12;
+  static const int odom_size = 10;
 
-  // state = [x, y, z, xdot, ydot, zdot, yaw, pitch, roll, fdx, fdy, fdz]T
-  Eigen::Matrix<double, state_size, 1> state;
-  Eigen::Matrix<double, state_size, 1> state_pred;
-  Eigen::Matrix<double, state_size, state_size> F_mat;
-  Eigen::Matrix<double, state_size, state_size> Q_mat;
-  Eigen::Matrix<double, state_size, state_size> P_mat;
-  Eigen::Matrix<double, state_size, state_size> P_pred_mat;
-  Eigen::Matrix<double, state_size, 1> state_est;
+  // state = [x, y, z, xdot, ydot, zdot, qw, qx, qy, qz, fdx, fdy, fdz]T
+  // error_state = [dpos, dvel, dtheta, dfd]T
+  eskf_state state, state_pred;
+  Eigen::Matrix<double, error_state_size, error_state_size> Q_mat;
+  Eigen::Matrix<double, error_state_size, error_state_size> P_mat;
+  Eigen::Matrix<double, error_state_size, error_state_size> P_pred_mat;
+  Eigen::Matrix<double, odom_size, odom_size> R_odom;
+  Eigen::Matrix<double, error_state_size, 1> error_state;
 
   // input = [yaw_rate, pitch, roll, thrust]T
   Eigen::Vector4d past_cmd, latest_cmd;

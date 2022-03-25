@@ -1,4 +1,4 @@
-#include "state_estimation/state_observer_eskf.h"
+#include "state_estimation/state_observer_w_marker.h"
 
 int main(int argc, char **argv)
 {
