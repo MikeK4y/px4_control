@@ -147,6 +147,95 @@ void AcadosNMPC::setTrajectory(
   trajectory_length = current_reference_trajectory.size();
 }
 
+bool AcadosNMPC::getTrajectory(std::vector<trajectory_setpoint> &trajectory,
+                               const trajectory_setpoint &start_point,
+                               const trajectory_setpoint &goal_point) {
+  // Use goal point as the reference trajectory
+  current_reference_trajectory.clear();
+  current_reference_trajectory.push_back(goal_point);
+  trajectory_index = 0;
+  trajectory_length = current_reference_trajectory.size();
+
+  // Clean trajectory handle, set goal point as the reference
+  trajectory.clear();
+  updateReference();
+
+  // Initialize state without disturbances
+  std::vector<double> no_disturbances;
+  no_disturbances.push_back(0);
+  no_disturbances.push_back(0);
+  no_disturbances.push_back(0);
+  setCurrentState(start_point, no_disturbances);
+  bool reached_goal = false;
+
+  // Run NMPC to create trajectory
+  while (!reached_goal) {
+    int status = drone_w_disturbances_acados_solve(acados_ocp_capsule);
+
+    if (status == ACADOS_SUCCESS || status == ACADOS_MAXITER) {
+      // Get state at each time step
+      double u_i[DRONE_W_DISTURBANCES_NU];
+      double x_i[DRONE_W_DISTURBANCES_NX];
+      for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++) {
+        ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "u", &u_i);
+        ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, i, "x", &x_i);
+
+        // Naive way to see if we reached the goal
+        double sum_u = std::abs(u_i[0]) + std::abs(u_i[1]) + std::abs(u_i[2]) +
+                       std::abs(u_i[3] - hover_thrust);
+        double dp = std::abs(goal_point.pos_x - x_i[0]) +
+                    std::abs(goal_point.pos_y - x_i[1]) +
+                    std::abs(goal_point.pos_z - x_i[2]);
+
+        // If we are not close add point
+        if (dp > 0.05 || sum_u > 0.05) {
+          trajectory_setpoint setpoint;
+          setpoint.pos_x = x_i[0];
+          setpoint.pos_y = x_i[1];
+          setpoint.pos_z = x_i[2];
+          setpoint.vel_x = x_i[3];
+          setpoint.vel_y = x_i[4];
+          setpoint.vel_z = x_i[5];
+          setpoint.q_roll = x_i[6];
+          setpoint.q_pitch = x_i[7];
+          setpoint.q_yaw = x_i[8];
+          trajectory.push_back(setpoint);
+        } else {
+          trajectory.push_back(goal_point);
+          reached_goal = true;
+          break;
+        }
+
+        // Trajectory just got longer than 5 minutes
+        if (trajectory.size() > 6000) {
+          std::cerr << "Looks like it's getting out of hand\n";
+          return false;
+        }
+      }
+      // In case we haven't reached the goal yet update the current state and
+      // run the nmpc again
+      if (!reached_goal) {
+        trajectory_setpoint setpoint;
+        setpoint.pos_x = x_i[0];
+        setpoint.pos_y = x_i[1];
+        setpoint.pos_z = x_i[2];
+        setpoint.vel_x = x_i[3];
+        setpoint.vel_y = x_i[4];
+        setpoint.vel_z = x_i[5];
+        setpoint.q_roll = x_i[6];
+        setpoint.q_pitch = x_i[7];
+        setpoint.q_yaw = x_i[8];
+        setCurrentState(setpoint, no_disturbances);
+      }
+    } else {
+      std::cerr << "drone_w_disturbances_acados_solve() failed with status: "
+                << status << "\n";
+      return false;
+    }
+  }
+  return reached_goal;
+}
+
 void AcadosNMPC::setCurrentState(const trajectory_setpoint &state,
                                  const std::vector<double> &disturbances) {
   updateInitialConditions(state);
@@ -161,6 +250,7 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
                          : trajectory_index;
 
   int status = drone_w_disturbances_acados_solve(acados_ocp_capsule);
+
 #ifndef TRACK_TIME
   double elapsed_time;
   ocp_nlp_get(nlp_config, nlp_solver, "time_tot", &elapsed_time);

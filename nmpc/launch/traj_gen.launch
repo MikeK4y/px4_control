@@ -1,0 +1,5 @@
+<launch>
+  <node name="traj_gen_node" pkg="nmpc" type="trajectory_generation_node" output="screen" required="true">
+    <rosparam command="load" file="$(find state_estimation)/cfg/iris_sitl_parameters.yaml"/>
+  </node>
+</launch>

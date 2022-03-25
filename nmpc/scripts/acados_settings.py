@@ -67,6 +67,11 @@ def acados_settings(Tf, N, generate_code=False):
     ocp.cost.yref_e = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     # OCP constraints
+    # Velocity constraints
+    v_hor_min = -0.25
+    v_hor_max = 0.25
+    v_ver_min = -0.1
+    v_ver_max = 0.25
     # Attitude constraints
     pitch_min = -0.2*np.pi
     pitch_max = 0.2*np.pi
@@ -75,9 +80,11 @@ def acados_settings(Tf, N, generate_code=False):
     yaw_min = -np.pi
     yaw_max = np.pi
 
-    ocp.constraints.idxbx = np.array([6, 7, 8])
-    ocp.constraints.lbx = np.array([roll_min, pitch_min, yaw_min])
-    ocp.constraints.ubx = np.array([roll_max, pitch_max, yaw_max])
+    ocp.constraints.idxbx = np.array([3, 4, 5, 6, 7, 8])
+    ocp.constraints.lbx = np.array(
+        [v_hor_min, v_hor_min, v_ver_min, roll_min, pitch_min, yaw_min])
+    ocp.constraints.ubx = np.array(
+        [v_hor_max, v_hor_max, v_ver_max, roll_max, pitch_max, yaw_max])
 
     # Input constraints
     yaw_rate_min = -0.1*np.pi

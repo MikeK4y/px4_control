@@ -122,9 +122,9 @@ void PX4Control::droneStateCallback(const px4_control_msgs::DroneState &msg) {
   drone_state.vel_x = msg.velocity.x;
   drone_state.vel_y = msg.velocity.y;
   drone_state.vel_z = msg.velocity.z;
-  drone_state.q_roll = msg.orientation_euler.x;
-  drone_state.q_pitch = msg.orientation_euler.y;
-  drone_state.q_yaw = msg.orientation_euler.z;
+  // drone_state.q_roll = msg.orientation_euler.x;
+  // drone_state.q_pitch = msg.orientation_euler.y;
+  // drone_state.q_yaw = msg.orientation_euler.z;
 
   disturbances.clear();
   disturbances.push_back(msg.disturbances.x);

@@ -63,6 +63,17 @@ class AcadosNMPC {
   void setTrajectory(const std::vector<trajectory_setpoint> &trajectory);
 
   /**
+   * @brief Generates a trajectory from an initial and goal point using the nmpc
+   * @param trajectory The reference trajectory vector
+   * @param start_point The trajectory's starting point
+   * @param goal_point The trajectory's goal point
+   * @returns True if successful
+   */
+  bool getTrajectory(std::vector<trajectory_setpoint> &trajectory,
+                     const trajectory_setpoint &start_point,
+                     const trajectory_setpoint &goal_point);
+
+  /**
    * @brief Sets the current UAS state
    * @param state Current UAS state
    * @param disturbances Current estimation of external disturbances. Expects a

@@ -61,8 +61,16 @@ add_executable(px4_nmpc_node
   src/px4_control.cc
 )
 
+add_executable(trajectory_generation_node
+  src/trajectory_generation.cc
+)
+
 ## Dependencies
 add_dependencies(px4_nmpc_node
+  ${catkin_EXPORTED_TARGETS}
+)
+
+add_dependencies(trajectory_generation_node
   ${catkin_EXPORTED_TARGETS}
 )
 
@@ -73,6 +81,11 @@ target_link_libraries(acados_nmpc
 )
 
 target_link_libraries(px4_nmpc_node
+  ${catkin_LIBRARIES}
+  acados_nmpc
+)
+
+target_link_libraries(trajectory_generation_node
   ${catkin_LIBRARIES}
   acados_nmpc
 )
