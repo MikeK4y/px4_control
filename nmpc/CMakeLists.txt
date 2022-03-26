@@ -52,32 +52,24 @@ include_directories(
 )
 
 ## Runnables
+# Acados NMPC
 add_library(acados_nmpc
   src/acados_nmpc.cc
 )
 
+target_link_libraries(acados_nmpc
+  ${acados_LIBRARIES}
+  ${nmpc_generated_LIBRARIES}
+)
+
+# PX4 control node
 add_executable(px4_nmpc_node
   src/px4_control_node.cc
   src/px4_control.cc
 )
 
-add_executable(trajectory_generation_node
-  src/trajectory_generation.cc
-)
-
-## Dependencies
 add_dependencies(px4_nmpc_node
   ${catkin_EXPORTED_TARGETS}
-)
-
-add_dependencies(trajectory_generation_node
-  ${catkin_EXPORTED_TARGETS}
-)
-
-## Links
-target_link_libraries(acados_nmpc
-  ${acados_LIBRARIES}
-  ${nmpc_generated_LIBRARIES}
 )
 
 target_link_libraries(px4_nmpc_node
@@ -85,7 +77,16 @@ target_link_libraries(px4_nmpc_node
   acados_nmpc
 )
 
-target_link_libraries(trajectory_generation_node
+# MAster control
+add_executable(master_control_node
+  src/master_control.cc
+)
+
+add_dependencies(master_control_node
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(master_control_node
   ${catkin_LIBRARIES}
   acados_nmpc
 )

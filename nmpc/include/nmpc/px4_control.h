@@ -14,7 +14,7 @@
 #include <std_srvs/SetBool.h>
 #include <std_srvs/Trigger.h>
 
-#include "px4_control_msgs/DroneState.h"
+#include "px4_control_msgs/DroneStateMarker.h"
 #include "px4_control_msgs/Setpoint.h"
 #include "px4_control_msgs/Trajectory.h"
 
@@ -44,7 +44,7 @@ class PX4Control {
 
   // Callbacks
   void mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg);
-  void droneStateCallback(const px4_control_msgs::DroneState &msg);
+  void droneStateCallback(const px4_control_msgs::DroneStateMarker &msg);
   void setpointCallback(const px4_control_msgs::Setpoint &msg);
   void trajectoryCallback(const px4_control_msgs::Trajectory &msg);
 
@@ -62,7 +62,8 @@ class PX4Control {
    */
   void commandPublisher(const double &pub_rate);
 
-  /** @brief Loads the node parameters
+  /**
+   * @brief Loads the node parameters
    */
   void loadParameters();
 

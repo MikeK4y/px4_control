@@ -6,7 +6,6 @@
 // ROS messages
 #include <mavros_msgs/AttitudeTarget.h>
 #include <nav_msgs/Odometry.h>
-
 #include "px4_control_msgs/DroneStateMarker.h"
 
 // Eigen

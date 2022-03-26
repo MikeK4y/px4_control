@@ -204,8 +204,8 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
       predict(msg.header.stamp);
 
       // Run correction
-      Eigen::MatrixXd H_mat(9, 12);
-      Eigen::MatrixXd y_expected(9, 1);
+      Eigen::MatrixXd H_mat;
+      Eigen::MatrixXd y_expected;
       odom_sensor->correctionData(state_pred, H_mat, y_expected);
 
       Eigen::MatrixXd S =

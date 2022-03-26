@@ -25,8 +25,8 @@ class MavrosOdometry : public BaseSensor {
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
   static const int measurement_size = 10;
-  static const int state_size = 13;
-  static const int error_state_size = 12;
+  static const int state_size = 20;
+  static const int error_state_size = 18;
 
   /**
    * @brief Calculates the H matrix using the predicted state

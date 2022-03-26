@@ -114,7 +114,8 @@ void PX4Control::mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg) {
   current_status = *msg;
 }
 
-void PX4Control::droneStateCallback(const px4_control_msgs::DroneState &msg) {
+void PX4Control::droneStateCallback(
+    const px4_control_msgs::DroneStateMarker &msg) {
   std::lock_guard<std::mutex> state_guard(*(drone_state_mutex));
   drone_state.pos_x = msg.pose.position.x;
   drone_state.pos_y = msg.pose.position.y;
