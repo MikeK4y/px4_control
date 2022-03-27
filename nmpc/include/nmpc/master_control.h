@@ -61,7 +61,6 @@ class MasterControl {
   trajectory_setpoint goal_world, goal_marker;
 
   bool traj_world, traj_marker;
-  bool marker_found;
 
   Eigen::Vector3d marker_pos_set, setpoint_marker;
 

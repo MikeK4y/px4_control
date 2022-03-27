@@ -23,6 +23,7 @@ MasterControl::MasterControl(ros::NodeHandle &nh) {
 
   // Clear weights
   weights.clear();
+  traj_world, traj_marker = false;
 
   // Load parameters
   loadParameters();
@@ -137,9 +138,15 @@ void MasterControl::droneStateCallback(
     traj_start.q_pitch = p;
     traj_start.q_yaw = y;
 
+    std::vector<double> disturbances;
+    disturbances.push_back(msg.disturbances.x);
+    disturbances.push_back(msg.disturbances.y);
+    disturbances.push_back(msg.disturbances.z);
+
     // Generate trajectory
     std::vector<trajectory_setpoint> trajectory;
-    traj_generation->getTrajectory(trajectory, traj_start, goal_world);
+    traj_generation->getTrajectory(trajectory, traj_start, goal_world,
+                                   disturbances);
 
     // Publish trajectory
     if (trajectory.size() > 0) {
@@ -202,9 +209,15 @@ void MasterControl::droneStateCallback(
         traj_goal.q_pitch = 0.0;
         traj_goal.q_yaw = y;
 
+        std::vector<double> disturbances;
+        disturbances.push_back(msg.disturbances.x);
+        disturbances.push_back(msg.disturbances.y);
+        disturbances.push_back(msg.disturbances.z);
+
         // Generate trajectory
         std::vector<trajectory_setpoint> trajectory;
-        traj_generation->getTrajectory(trajectory, traj_start, traj_goal);
+        traj_generation->getTrajectory(trajectory, traj_start, goal_world,
+                                       disturbances);
 
         // Publish trajectory
         if (trajectory.size() > 0) {
@@ -270,9 +283,15 @@ void MasterControl::droneStateCallback(
           traj_goal.q_pitch = 0.0;
           traj_goal.q_yaw = y;
 
+          std::vector<double> disturbances;
+          disturbances.push_back(msg.disturbances.x);
+          disturbances.push_back(msg.disturbances.y);
+          disturbances.push_back(msg.disturbances.z);
+
           // Generate trajectory
           std::vector<trajectory_setpoint> trajectory;
-          traj_generation->getTrajectory(trajectory, traj_start, traj_goal);
+          traj_generation->getTrajectory(trajectory, traj_start, goal_world,
+                                         disturbances);
 
           // Publish trajectory
           if (trajectory.size() > 0) {

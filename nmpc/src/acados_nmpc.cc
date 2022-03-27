@@ -149,7 +149,8 @@ void AcadosNMPC::setTrajectory(
 
 bool AcadosNMPC::getTrajectory(std::vector<trajectory_setpoint> &trajectory,
                                const trajectory_setpoint &start_point,
-                               const trajectory_setpoint &goal_point) {
+                               const trajectory_setpoint &goal_point,
+                               const std::vector<double> &disturbances) {
   // Use goal point as the reference trajectory
   current_reference_trajectory.clear();
   current_reference_trajectory.push_back(goal_point);
@@ -160,12 +161,8 @@ bool AcadosNMPC::getTrajectory(std::vector<trajectory_setpoint> &trajectory,
   trajectory.clear();
   updateReference();
 
-  // Initialize state without disturbances
-  std::vector<double> no_disturbances;
-  no_disturbances.push_back(0);
-  no_disturbances.push_back(0);
-  no_disturbances.push_back(0);
-  setCurrentState(start_point, no_disturbances);
+  // Initialize state
+  setCurrentState(start_point, disturbances);
   bool reached_goal = false;
 
   // Run NMPC to create trajectory

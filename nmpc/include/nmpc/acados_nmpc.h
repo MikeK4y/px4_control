@@ -71,7 +71,8 @@ class AcadosNMPC {
    */
   bool getTrajectory(std::vector<trajectory_setpoint> &trajectory,
                      const trajectory_setpoint &start_point,
-                     const trajectory_setpoint &goal_point);
+                     const trajectory_setpoint &goal_point,
+                     const std::vector<double> &disturbances);
 
   /**
    * @brief Sets the current UAS state

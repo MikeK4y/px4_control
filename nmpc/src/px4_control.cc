@@ -5,6 +5,8 @@
 #include <mavros_msgs/SetMode.h>
 #include <tf2/LinearMath/Quaternion.h>
 
+#include "tf/transform_datatypes.h"
+
 namespace px4_ctrl {
 PX4Control::PX4Control(ros::NodeHandle &nh, const double &rate) {
   // Setup Subscribers
@@ -123,9 +125,15 @@ void PX4Control::droneStateCallback(
   drone_state.vel_x = msg.velocity.x;
   drone_state.vel_y = msg.velocity.y;
   drone_state.vel_z = msg.velocity.z;
-  // drone_state.q_roll = msg.orientation_euler.x;
-  // drone_state.q_pitch = msg.orientation_euler.y;
-  // drone_state.q_yaw = msg.orientation_euler.z;
+
+  tf::Quaternion q;
+  tf::quaternionMsgToTF(msg.pose.orientation, q);
+  double y, p, r;
+  tf::Matrix3x3(q).getEulerYPR(y, p, r);
+
+  traj_start.q_roll = r;
+  traj_start.q_pitch = p;
+  traj_start.q_yaw = y;
 
   disturbances.clear();
   disturbances.push_back(msg.disturbances.x);

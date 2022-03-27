@@ -68,10 +68,10 @@ def acados_settings(Tf, N, generate_code=False):
 
     # OCP constraints
     # Velocity constraints
-    v_hor_min = -0.25
-    v_hor_max = 0.25
+    v_hor_min = -0.5
+    v_hor_max = 0.5
     v_ver_min = -0.1
-    v_ver_max = 0.25
+    v_ver_max = 1.0
     # Attitude constraints
     pitch_min = -0.2*np.pi
     pitch_max = 0.2*np.pi
