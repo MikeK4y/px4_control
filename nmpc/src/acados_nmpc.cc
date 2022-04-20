@@ -222,7 +222,7 @@ bool AcadosNMPC::getTrajectory(std::vector<trajectory_setpoint> &trajectory,
         setpoint.q_roll = x_i[6];
         setpoint.q_pitch = x_i[7];
         setpoint.q_yaw = x_i[8];
-        setCurrentState(setpoint, no_disturbances);
+        setCurrentState(setpoint, disturbances);
       }
     } else {
       std::cerr << "drone_w_disturbances_acados_solve() failed with status: "
