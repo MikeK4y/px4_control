@@ -57,22 +57,18 @@ void StateObserver::loadParameters() {
 
   // Observer parameters
   // Error covariance
-  std::vector<double> P_p, P_v, P_dq, P_fd, P_mp, P_mdq;
+  std::vector<double> P_p, P_v, P_dq, P_fd;
   nh_pvt.getParam("P_p", P_p);
   nh_pvt.getParam("P_v", P_v);
   nh_pvt.getParam("P_dq", P_dq);
   nh_pvt.getParam("P_fd", P_fd);
-  nh_pvt.getParam("P_mp", P_mp);
-  nh_pvt.getParam("P_mdq", P_mdq);
 
   // Process covariance
-  double Q_p, Q_v, Q_dq, Q_fd, Q_mp, Q_mdq;
+  double Q_p, Q_v, Q_dq, Q_fd;
   nh_pvt.param("Q_p", Q_p, 0.1);
   nh_pvt.param("Q_v", Q_v, 0.1);
   nh_pvt.param("Q_dq", Q_dq, 0.1);
   nh_pvt.param("Q_fd", Q_fd, 0.1);
-  nh_pvt.param("Q_mp", Q_mp, 0.001);
-  nh_pvt.param("Q_mdq", Q_mdq, 0.001);
 
   // Odometry covariance
   std::vector<double> R_odom_p, R_odom_v, R_odom_q;
@@ -88,18 +84,12 @@ void StateObserver::loadParameters() {
       Eigen::Vector3d(P_dq[0], P_dq[1], P_dq[2]);
   P_mat.block(9, 9, 3, 3).diagonal() =
       Eigen::Vector3d(P_fd[0], P_fd[1], P_fd[2]);
-  P_mat.block(12, 12, 3, 3).diagonal() =
-      Eigen::Vector3d(P_mp[0], P_mp[1], P_mp[2]);
-  P_mat.block(15, 15, 3, 3).diagonal() =
-      Eigen::Vector3d(P_mdq[0], P_mdq[1], P_mdq[2]);
 
   Q_mat.setZero();
   Q_mat.block(0, 0, 3, 3) = Q_p * Eigen::Matrix3d::Identity();
   Q_mat.block(3, 3, 3, 3) = Q_v * Eigen::Matrix3d::Identity();
   Q_mat.block(6, 6, 3, 3) = Q_dq * Eigen::Matrix3d::Identity();
   Q_mat.block(9, 9, 3, 3) = Q_fd * Eigen::Matrix3d::Identity();
-  Q_mat.block(12, 12, 3, 3) = Q_mp * Eigen::Matrix3d::Identity();
-  Q_mat.block(15, 15, 3, 3) = Q_mdq * Eigen::Matrix3d::Identity();
 
   R_odom.setZero();
   R_odom.block(0, 0, 3, 3).diagonal() =
@@ -397,12 +387,12 @@ void StateObserver::publishState(ros::Time time) {
   msg.disturbances.y = state.disturbances(1);
   msg.disturbances.z = state.disturbances(2);
 
-  // Error covariance
-  for (size_t i = 0; i < P_mat.rows(); i++) {
-    for (size_t j = 0; j < P_mat.cols(); j++) {
-      msg.covariance.push_back(P_mat(i, j));
-    }
-  }
+  // // Error covariance
+  // for (size_t i = 0; i < P_mat.rows(); i++) {
+  //   for (size_t j = 0; j < P_mat.cols(); j++) {
+  //     msg.covariance.push_back(P_mat(i, j));
+  //   }
+  // }
 
   // Publish message
   state_pub.publish(msg);

@@ -2,7 +2,7 @@
 clear; close all; clc;
 
 %% User defined data
-bag_file = '../data/f550.bag';
+bag_file = '../data/iris_sitl.bag';
 plot_results = true;
 save_model_cfg = true;
 
@@ -24,7 +24,8 @@ rc_data.rp_max = deg2rad(35);                % MPC_MAN_TILT_MAX
 rc_data.yr_max = deg2rad(45);                % MPC_MAN_Y_MAX
 
 %% Load flight data
-modelID_data = loadFlightData(bag_file, rc_data, false);
+% modelID_data = loadFlightData(bag_file, rc_data, false);
+modelID_data = loadFlightDataSim(bag_file, false);
 
 %% Get model
 model = getMRModel(modelID_data);

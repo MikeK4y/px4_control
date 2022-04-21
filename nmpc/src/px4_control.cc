@@ -131,9 +131,9 @@ void PX4Control::droneStateCallback(
   double y, p, r;
   tf::Matrix3x3(q).getEulerYPR(y, p, r);
 
-  // traj_start.q_roll = r;
-  // traj_start.q_pitch = p;
-  // traj_start.q_yaw = y;
+  drone_state.q_yaw = y;
+  drone_state.q_pitch = p;
+  drone_state.q_roll = r;
 
   disturbances.clear();
   disturbances.push_back(msg.disturbances.x);

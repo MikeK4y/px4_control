@@ -87,7 +87,6 @@ class StateObserver {
   /**
    * @brief Publishes the current state estimate
    * @param time Timestamp for the current state
-   * TODO: Publish covariance as well
    */
   void publishState(ros::Time time);
 

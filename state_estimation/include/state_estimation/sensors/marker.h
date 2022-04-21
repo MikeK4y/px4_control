@@ -133,15 +133,15 @@ class MarkerPose : public BaseSensor {
     Eigen::Vector3d p_meas =
         R_mat.transpose() * (state.marker_position - state.position);
 
-    Eigen::Matrix<double, measurement_size, 1> y_est;
+    Eigen::Matrix<double, measurement_size, 1> y_exp;
 
-    y_est.segment(0, 3) = p_meas;
-    y_est(3) = q_meas.w();
-    y_est(4) = q_meas.x();
-    y_est(5) = q_meas.y();
-    y_est(6) = q_meas.z();
+    y_exp.segment(0, 3) = p_meas;
+    y_exp(3) = q_meas.w();
+    y_exp(4) = q_meas.x();
+    y_exp(5) = q_meas.y();
+    y_exp(6) = q_meas.z();
 
-    return y_est;
+    return y_exp;
   }
 };
 }  // namespace px4_ctrl
