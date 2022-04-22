@@ -150,14 +150,10 @@ void MasterControl::droneStateCallback(
 
     // Publish trajectory
     if (trajectory.size() > 0) {
-      if (enableController(false)) {
-        trajectory_pub.publish(setpointVectorToTrajMsg(trajectory));
-        if (triggerTrajectoryTracking()) {
-          if (enableController(true)) {
-            traj_world = true;
-            ROS_INFO("Trajectory to first goal sent and tracking enabled");
-          }
-        }
+      trajectory_pub.publish(setpointVectorToTrajMsg(trajectory));
+      if (triggerTrajectoryTracking()) {
+        traj_world = true;
+        ROS_INFO("Trajectory to first goal sent and tracking enabled");
       }
     }
   } else {
@@ -221,15 +217,11 @@ void MasterControl::droneStateCallback(
 
         // Publish trajectory
         if (trajectory.size() > 0) {
-          if (enableController(false)) {
-            trajectory_pub.publish(setpointVectorToTrajMsg(trajectory));
-            if (triggerTrajectoryTracking()) {
-              if (enableController(true)) {
-                marker_pos_set = marker_pos;
-                traj_marker = true;
-                ROS_INFO("Trajectory to marker goal sent and tracking enabled");
-              }
-            }
+          trajectory_pub.publish(setpointVectorToTrajMsg(trajectory));
+          if (triggerTrajectoryTracking()) {
+            marker_pos_set = marker_pos;
+            traj_marker = true;
+            ROS_INFO("Trajectory to marker goal sent and tracking enabled");
           }
         }
       } else {
@@ -239,8 +231,8 @@ void MasterControl::droneStateCallback(
                                    msg.marker_pose.position.z);
         double dx = (marker_pos_set - marker_pos).norm();
 
-        // If the marker position has drifted more than 10cm set new trajectory
-        if (dx > 0.1) {
+        // If the marker position has drifted more than 20cm set new trajectory
+        if (dx > 0.2) {
           trajectory_setpoint traj_start;
           traj_start.pos_x = msg.pose.position.x;
           traj_start.pos_y = msg.pose.position.y;
@@ -295,16 +287,12 @@ void MasterControl::droneStateCallback(
 
           // Publish trajectory
           if (trajectory.size() > 0) {
-            if (enableController(false)) {
-              trajectory_pub.publish(setpointVectorToTrajMsg(trajectory));
-              if (triggerTrajectoryTracking()) {
-                if (enableController(true)) {
-                  marker_pos_set = marker_pos;
-                  ROS_INFO(
-                      "New trajectory to marker goal sent and tracking "
-                      "enabled");
-                }
-              }
+            trajectory_pub.publish(setpointVectorToTrajMsg(trajectory));
+            if (triggerTrajectoryTracking()) {
+              marker_pos_set = marker_pos;
+              ROS_INFO(
+                  "New trajectory to marker goal sent and tracking "
+                  "enabled");
             }
           }
         }
