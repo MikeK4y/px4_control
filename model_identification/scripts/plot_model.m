@@ -1,20 +1,41 @@
 function plot_model(modelID_data, model)
+% state = [x, y, z, xdot, ydot, zdot, qw, qx, qy, qz]'
+% input = [y_cmd, p_cmd, r_cmd, T_cmd]'
+% model_params = [dxy, dz, kT, tp, tr, kp, kr]'
+
 %% Generate model data
+% x_est = zeros(length(modelID_data.time), 1);
+% y_est = zeros(length(modelID_data.time), 1);
+% z_est = zeros(length(modelID_data.time), 1);
+
 xdot_est = zeros(length(modelID_data.time), 1);
 ydot_est = zeros(length(modelID_data.time), 1);
 zdot_est = zeros(length(modelID_data.time), 1);
 
-for i = 1 : (length(modelID_data.time) - 1)
-    [xddot_est, yddot_est, zddot_est] = droneModel(...
-        modelID_data.xdot(i), modelID_data.ydot(i), modelID_data.zdot(i), ...
-        [modelID_data.qw(i), modelID_data.qx(i), modelID_data.qy(i), modelID_data.qz(i)], ...
-        modelID_data.Tcmd(i), ...
-        model.thrust_coeff, model.damping_coeff(1), model.damping_coeff(2), model.damping_coeff(3));
+params = [...
+    model.damping_coeff(2); model.damping_coeff(3);...
+    model.thrust_coeff;...
+    model.pitch_time_c; model.roll_time_c; model.pitch_gain; model.roll_gain];
 
+for i = 1 : (length(modelID_data.time) - 1)
     dt = modelID_data.time(i + 1) - modelID_data.time(i);
-    xdot_est(i + 1) = modelID_data.xdot(i) + dt * xddot_est;
-    ydot_est(i + 1) = modelID_data.ydot(i) + dt * yddot_est;
-    zdot_est(i + 1) = modelID_data.zdot(i) + dt * zddot_est;
+    
+    X = [...
+        modelID_data.x(i); modelID_data.y(i); modelID_data.z(i);...
+        modelID_data.xdot(i); modelID_data.ydot(i); modelID_data.zdot(i);...
+        modelID_data.qw(i); modelID_data.qx(i); modelID_data.qy(i); modelID_data.qz(i);];
+    
+    u = [modelID_data.Ycmd(i); modelID_data.Pcmd(i); modelID_data.Rcmd(i); modelID_data.Tcmd(i);];
+    
+    state_k = droneModel(X, u, params, dt);
+    
+%     x_est(i + 1) = state_k(1);
+%     y_est(i + 1) = state_k(2);
+%     z_est(i + 1) = state_k(3);
+    
+    xdot_est(i + 1) = state_k(4);
+    ydot_est(i + 1) = state_k(5);
+    zdot_est(i + 1) = state_k(6);
 end
 
 dt = mean(diff(modelID_data.time));
@@ -37,6 +58,27 @@ hold on
 compare(pitch_data, pitch_tf)
 title('Pitch data and model')
 hold off
+
+% % Position
+% figure
+% subplot(3, 1, 1)
+% hold on
+% plot(modelID_data.time(2:end), modelID_data.x(2:end), 'b')
+% plot(modelID_data.time(2:end), x_est(2:end), 'r.')
+% title('Position x-axis')
+% hold off
+% subplot(3, 1, 2)
+% hold on
+% plot(modelID_data.time(2:end), modelID_data.y(2:end), 'b')
+% plot(modelID_data.time(2:end), y_est(2:end), 'r.')
+% title('Position y-axis')
+% hold off
+% subplot(3, 1, 3)
+% hold on
+% plot(modelID_data.time(2:end), modelID_data.z(2:end), 'b')
+% plot(modelID_data.time(2:end), z_est(2:end), 'r.')
+% title('Position z-axis')
+% hold off
 
 % Velocity
 figure

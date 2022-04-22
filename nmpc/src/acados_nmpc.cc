@@ -114,20 +114,28 @@ bool AcadosNMPC::setWeighingMatrix(const std::vector<double> &weights) {
     for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
       ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, i, "W", W);
 
-    /** TODO: Solve CARE instead */
     double WN[DRONE_W_DISTURBANCES_NX * DRONE_W_DISTURBANCES_NX];
     for (int i = 0; i < DRONE_W_DISTURBANCES_NX * DRONE_W_DISTURBANCES_NX; i++)
       WN[i] = 0.0;
 
-    WN[0 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[0];
-    WN[1 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[1];
-    WN[2 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[2];
-    WN[3 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[3];
-    WN[4 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[4];
-    WN[5 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[5];
-    WN[6 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[6];
-    WN[7 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[7];
-    WN[8 * (DRONE_W_DISTURBANCES_NX + 1)] = DRONE_W_DISTURBANCES_N * weights[8];
+    WN[0 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[0];
+    WN[1 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[1];
+    WN[2 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[2];
+    WN[3 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[3];
+    WN[4 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[4];
+    WN[5 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[5];
+    WN[6 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[6];
+    WN[7 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[7];
+    WN[8 * (DRONE_W_DISTURBANCES_NX + 1)] =
+        10.0 * DRONE_W_DISTURBANCES_N * weights[8];
 
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, DRONE_W_DISTURBANCES_N,
                            "W", WN);

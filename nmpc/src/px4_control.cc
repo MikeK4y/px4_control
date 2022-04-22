@@ -144,7 +144,6 @@ void PX4Control::droneStateCallback(
 }
 
 void PX4Control::setpointCallback(const px4_control_msgs::Setpoint &msg) {
-  enable_controller = false;
   // Clear old trajectory
   current_reference_trajectory.clear();
 
@@ -163,7 +162,6 @@ void PX4Control::setpointCallback(const px4_control_msgs::Setpoint &msg) {
 }
 
 void PX4Control::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
-  enable_controller = false;
   // Clear old trajectory
   current_reference_trajectory.clear();
 
@@ -186,15 +184,15 @@ void PX4Control::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
 bool PX4Control::goToStartServCallback(std_srvs::Trigger::Request &req,
                                        std_srvs::Trigger::Response &res) {
   if (current_reference_trajectory.size() > 0) {
+    bool enable_controller_buf = enable_controller;
     enable_controller = false;
     std::vector<trajectory_setpoint> reference_trajectory;
     reference_trajectory.push_back(current_reference_trajectory[0]);
     nmpc_controller->setTrajectory(reference_trajectory);
     trajectory_loaded = true;
     res.success = true;
-    ROS_INFO(
-        "Setpoint was set to the start of the trajectory. Enable controller to "
-        "get there");
+    ROS_INFO("Setpoint was set to the start of the trajectory");
+    enable_controller = enable_controller_buf;
     return true;
   } else {
     ROS_WARN("No setpoint or trajectory is loaded. Load one and try again");
@@ -206,11 +204,13 @@ bool PX4Control::goToStartServCallback(std_srvs::Trigger::Request &req,
 bool PX4Control::startTrajectoryServCallback(std_srvs::Trigger::Request &req,
                                              std_srvs::Trigger::Response &res) {
   if (current_reference_trajectory.size() > 0) {
+    bool enable_controller_buf = enable_controller;
     enable_controller = false;
     nmpc_controller->setTrajectory(current_reference_trajectory);
     trajectory_loaded = true;
     res.success = true;
-    ROS_INFO("The full trajectory was loaded. Enable controller to get there");
+    ROS_INFO("The full trajectory was loaded");
+    enable_controller = enable_controller_buf;
     return true;
   } else {
     ROS_WARN("No setpoint or trajectory is loaded. Load one and try again");
