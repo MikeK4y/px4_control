@@ -13,10 +13,14 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   // Setup Subscribers
   odom_sub = nh.subscribe("/mavros/local_position/odom", 1,
                           &StateObserver::odomCallback, this);
-  ctrl_sub = nh.subscribe("/mavros/setpoint_raw/attitude", 1,
-                          &StateObserver::ctrlCallback, this);
+  att_ctrl_sub = nh.subscribe("/mavros/setpoint_raw/attitude", 1,
+                              &StateObserver::attCtrlCallback, this);
+  vel_ctrl_sub = nh.subscribe("/mavros/setpoint_raw/local", 1,
+                              &StateObserver::velCtrlCallback, this);
   marker_sub =
       nh.subscribe("/marker/pose", 1, &StateObserver::markerCallback, this);
+  mavros_status_sub = nh.subscribe("/mavros/state", 1,
+                                   &StateObserver::mavrosStatusCallback, this);
 
   // Setup Publisher
   state_pub =
@@ -35,6 +39,7 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   past_cmd = Eigen::Vector4d::Zero();
   latest_cmd = Eigen::Vector4d::Zero();
   latest_cmd_time = ros::Time::now();
+  vel_cmd_time = ros::Time::now();
 }
 
 StateObserver::~StateObserver() {}
@@ -126,6 +131,34 @@ void StateObserver::loadParameters() {
       Eigen::Vector3d(R_marker_p[0], R_marker_p[1], R_marker_p[2]);
   R_marker.block(3, 3, 4, 4).diagonal() = Eigen::Vector4d(
       R_marker_q[0], R_marker_q[1], R_marker_q[2], R_marker_q[3]);
+}
+
+// Attitude Control Callback
+void StateObserver::attCtrlCallback(const mavros_msgs::AttitudeTarget &msg) {
+  // Get Pitch and Roll commands from the quaternion
+  tf::Quaternion q_cmd;
+  tf::quaternionMsgToTF(msg.orientation, q_cmd);
+  double y_cmd, p_cmd, r_cmd;
+  tf::Matrix3x3(q_cmd).getEulerYPR(y_cmd, p_cmd, r_cmd);
+
+  // Construct command
+  Eigen::Vector4d cmd(msg.body_rate.z, p_cmd, r_cmd, (double)msg.thrust);
+
+  // Update commands
+  past_cmd = latest_cmd;
+  latest_cmd = cmd;
+  latest_cmd_time = msg.header.stamp;
+}
+
+// Velocity Control Callback
+void StateObserver::velCtrlCallback(const mavros_msgs::PositionTarget &msg) {
+  vel_cmd_time = msg.header.stamp;
+}
+
+// Status Callback
+void StateObserver::mavrosStatusCallback(
+    const mavros_msgs::State::ConstPtr &msg) {
+  current_status = *msg;
 }
 
 // Odometry Callback
@@ -232,23 +265,6 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
   }
 }
 
-// Control Callback
-void StateObserver::ctrlCallback(const mavros_msgs::AttitudeTarget &msg) {
-  // Get Pitch and Roll commands from the quaternion
-  tf::Quaternion q_cmd;
-  tf::quaternionMsgToTF(msg.orientation, q_cmd);
-  double y_cmd, p_cmd, r_cmd;
-  tf::Matrix3x3(q_cmd).getEulerYPR(y_cmd, p_cmd, r_cmd);
-
-  // Construct command
-  Eigen::Vector4d cmd(msg.body_rate.z, p_cmd, r_cmd, (double)msg.thrust);
-
-  // Update commands
-  past_cmd = latest_cmd;
-  latest_cmd = cmd;
-  latest_cmd_time = msg.header.stamp;
-}
-
 // Marker callback
 void StateObserver::markerCallback(const geometry_msgs::PoseStamped &msg) {
   if (is_initialized) {
@@ -318,43 +334,57 @@ void StateObserver::markerCallback(const geometry_msgs::PoseStamped &msg) {
 }
 
 void StateObserver::predict(ros::Time pred_time) {
-  // Find input for the prediction time step
   /** TODO: Doesn't work as I was expecting. In the test bag files the cmds
    * appear first but have a timestamp after the odometry's*/
-  Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
   double dt = (pred_time - past_state_time).toSec();
 
   /** TODO: There's a chance that the marker arrives with a stamp prior to the
    * latest odometry thus making the dt negative. In this case skip prediction.
-   * Using a buffer and rerun the filter will be a much better solution*/
+   * Using a circular buffer and rerun the filter will be a much better
+   * solution*/
   if (dt > 0.0) {
-    // If there's been a while without a new cmd set them to zero
-    if ((pred_time - latest_cmd_time).toSec() < 0.5) {
-      double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
-      double dt_p = dt_l < dt ? dt - dt_l : 0.0;
+    /** TODO: When the flight status is changed to POSCTL the z disturbance
+     * starts increasing to match gravity. So when it is switched back to
+     * OFFBOARD the first few inputs are effected by this increased disturbance
+     * causing a rapid decrease in altitude. The nmpc is set so that it will
+     * send out zero velocity commands if it's not in OFFBOARD mode. So in that
+     * case update the state accordingly. For now it basically skips update */
+    if ((pred_time - vel_cmd_time).toSec() < 0.5 &
+        (current_status.mode == "POSCTL" ||
+         current_status.mode == "AUTO.LOITER")) {
+      state_pred = state;
+      P_pred_mat = P_mat + Q_mat;
+    } else {
+      // Find input for the prediction time step
+      // If there's been a while without a new cmd set them to zero
+      Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
+      if ((pred_time - latest_cmd_time).toSec() < 0.5) {
+        double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
+        double dt_p = dt_l < dt ? dt - dt_l : 0.0;
 
-      cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
+        cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
+      }
+
+      // Run error covariance prediction asynchronously
+      std::future<void> p_pred_update_f =
+          std::async(std::launch::async, &StateObserver::updatePpred, this,
+                     std::cref(dt), std::cref(cmd));
+
+      // Use Runge Kutta 4 to propagate state
+      Eigen::VectorXd k1 = getSystemDerivative(state, cmd);
+      Eigen::VectorXd k2 =
+          getSystemDerivative(addUpdate(state, 0.5 * dt * k1), cmd);
+      Eigen::VectorXd k3 =
+          getSystemDerivative(addUpdate(state, 0.5 * dt * k2), cmd);
+      Eigen::VectorXd k4 = getSystemDerivative(addUpdate(state, dt * k3), cmd);
+
+      state_pred = addUpdate(state, dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6);
     }
-
-    // Run error covariance prediction asynchronously
-    std::future<void> p_pred_update_f =
-        std::async(std::launch::async, &StateObserver::updatePpred, this,
-                   std::cref(dt), std::cref(cmd));
-
-    // Use Runge Kutta 4 to propagate state
-    Eigen::VectorXd k1 = getSystemDerivative(state, cmd);
-    Eigen::VectorXd k2 =
-        getSystemDerivative(addUpdate(state, 0.5 * dt * k1), cmd);
-    Eigen::VectorXd k3 =
-        getSystemDerivative(addUpdate(state, 0.5 * dt * k2), cmd);
-    Eigen::VectorXd k4 = getSystemDerivative(addUpdate(state, dt * k3), cmd);
-
-    state_pred = addUpdate(state, dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6);
-    past_state_time = pred_time;
   } else {
     state_pred = state;
     P_pred_mat = P_mat + Q_mat;
   }
+  past_state_time = pred_time;
 }
 
 Eigen::VectorXd StateObserver::getSystemDerivative(const eskf_state &state,
@@ -565,12 +595,12 @@ void StateObserver::publishState(ros::Time time) {
     msg.marker_pose.orientation.z = state.marker_orientation.z();
   }
 
-  // Error covariance
-  for (size_t i = 0; i < P_mat.rows(); i++) {
-    for (size_t j = 0; j < P_mat.cols(); j++) {
-      msg.covariance.push_back(P_mat(i, j));
-    }
-  }
+  // // Error covariance
+  // for (size_t i = 0; i < P_mat.rows(); i++) {
+  //   for (size_t j = 0; j < P_mat.cols(); j++) {
+  //     msg.covariance.push_back(P_mat(i, j));
+  //   }
+  // }
 
   // Publish message
   state_pub.publish(msg);

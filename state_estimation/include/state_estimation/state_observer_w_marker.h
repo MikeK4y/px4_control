@@ -5,7 +5,9 @@
 
 // ROS messages
 #include <mavros_msgs/AttitudeTarget.h>
+#include <mavros_msgs/PositionTarget.h>
 #include <nav_msgs/Odometry.h>
+#include <mavros_msgs/State.h>
 #include "px4_control_msgs/DroneStateMarker.h"
 
 // Eigen
@@ -31,8 +33,10 @@ class StateObserver {
  private:
   // ROS Subscribers
   ros::Subscriber odom_sub;
-  ros::Subscriber ctrl_sub;
+  ros::Subscriber att_ctrl_sub;
+  ros::Subscriber vel_ctrl_sub;
   ros::Subscriber marker_sub;
+  ros::Subscriber mavros_status_sub;
 
   // ROS Publishers
   ros::Publisher state_pub;
@@ -43,7 +47,9 @@ class StateObserver {
   // Callbacks
   void odomCallback(const nav_msgs::Odometry &msg);
   void markerCallback(const geometry_msgs::PoseStamped &msg);
-  void ctrlCallback(const mavros_msgs::AttitudeTarget &msg);
+  void attCtrlCallback(const mavros_msgs::AttitudeTarget &msg);
+  void velCtrlCallback(const mavros_msgs::PositionTarget &msg);
+  void mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg);
 
   /** @brief Loads the model parameters
    */
@@ -115,6 +121,7 @@ class StateObserver {
   // input = [yaw_rate, pitch, roll, thrust]T
   Eigen::Vector4d past_cmd, latest_cmd;
   ros::Time latest_cmd_time;
+  ros::Time vel_cmd_time;
 
   // Model parameters
   Eigen::Vector3d gravity_vector;
@@ -128,5 +135,8 @@ class StateObserver {
   // Sensors
   MavrosOdometry *odom_sensor;
   MarkerPose *marker_sensor;
+
+  // PX4 Status
+  mavros_msgs::State current_status;
 };
 }  // namespace px4_ctrl
