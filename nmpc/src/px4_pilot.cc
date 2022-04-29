@@ -202,6 +202,7 @@ void PX4Pilot::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
 
     current_reference_trajectory.push_back(setpoint);
   }
+  nmpc_controller->setTrajectory(current_reference_trajectory);
 
   ROS_INFO("Trajectory loaded");
   trajectory_loaded = true;
@@ -288,7 +289,7 @@ void PX4Pilot::loadParameters() {
 }
 
 void PX4Pilot::changeMode(const std::string &mode) {
-  ros::Rate rate(10);
+  ros::Rate rate(5);
   mavros_msgs::SetMode status_mode;
   status_mode.request.custom_mode = mode;
 
