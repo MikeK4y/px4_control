@@ -89,6 +89,7 @@ add_dependencies(px4_pilot_node
 
 target_link_libraries(px4_pilot_node
   ${catkin_LIBRARIES}
+  acados_nmpc
 )
 
 # Master control

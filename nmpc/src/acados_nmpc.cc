@@ -332,6 +332,17 @@ void AcadosNMPC::updateReference() {
 
 void AcadosNMPC::updateInitialConditions(
     const trajectory_setpoint &state_init) {
+  // int idxbx0[DRONE_W_DISTURBANCES_NBX0];
+  // idxbx0[0] = 0;
+  // idxbx0[1] = 1;
+  // idxbx0[2] = 2;
+  // idxbx0[3] = 3;
+  // idxbx0[4] = 4;
+  // idxbx0[5] = 5;
+  // idxbx0[6] = 6;
+  // idxbx0[7] = 7;
+  // idxbx0[8] = 8;
+
   double x_init[DRONE_W_DISTURBANCES_NBX0];
   x_init[0] = state_init.pos_x;
   x_init[1] = state_init.pos_y;
@@ -345,8 +356,20 @@ void AcadosNMPC::updateInitialConditions(
 
   // Set the initial conditions by setting the lower and upper bounds to the
   // initial state values
+  // ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "idxbx",
+  // idxbx0);
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", x_init);
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", x_init);
+
+  double u0[DRONE_W_DISTURBANCES_NU];
+  u0[0] = 0.0;
+  u0[1] = 0.0;
+  u0[2] = 0.0;
+  u0[3] = hover_thrust;
+
+  for (int i = 0; i <= DRONE_W_DISTURBANCES_N; i++) {
+    ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "u", u0);
+  }
 }
 
 void AcadosNMPC::updateDisturbances(const double &fdis_x, const double &fdis_y,

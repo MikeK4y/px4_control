@@ -22,3 +22,12 @@ yaw_rate_cmd_w: 10
 pitch_cmd_w: 150
 roll_cmd_w: 150
 thrust_cmd_w: 250
+
+# RC
+auto_channel: 4
+auto_on: 982
+auto_off: 2006
+
+offboard_channel: 5
+offboard_on: 2006
+offboard_off: 1494

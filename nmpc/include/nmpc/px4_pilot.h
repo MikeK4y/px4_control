@@ -3,19 +3,27 @@
 #include <mutex>
 #include <thread>
 
+// Acados NMPC
+#include "nmpc/acados_nmpc.h"
+
 // ROS
 #include "ros/ros.h"
 
 // ROS messages
 #include <mavros_msgs/RCIn.h>
 #include <mavros_msgs/State.h>
+#include <std_srvs/SetBool.h>
+
+#include "px4_control_msgs/DroneStateMarker.h"
+#include "px4_control_msgs/Setpoint.h"
+#include "px4_control_msgs/Trajectory.h"
 
 namespace px4_ctrl {
 
 struct rc_switch {
   uint8_t channel;
-  uint16_t high;
-  uint16_t low;
+  uint16_t on_value;
+  uint16_t off_value;
 };
 
 class PX4Pilot {
@@ -29,25 +37,40 @@ class PX4Pilot {
   // ROS Subscribers
   ros::Subscriber mavros_status_sub;
   ros::Subscriber mavros_rc_sub;
-  ros::Subscriber controller_cmd_sub;
+  ros::Subscriber drone_state_sub;
+  ros::Subscriber trajectory_sub;
 
   // ROS Publishers
   ros::Publisher att_control_pub;
   ros::Publisher vel_control_pub;
 
+  // ROS Service Servers
+  ros::ServiceServer enable_controller_server;
+
   // ROS Service Clients
   ros::ServiceClient mavros_mode_client;
   ros::ServiceClient mavros_arm_client;
 
-  // Callbacks
+  // Subscriber Callbacks
   void mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg);
   void mavrosRCCallback(const mavros_msgs::RCIn::ConstPtr &msg);
-  void controllerCallback();
+  void droneStateCallback(const px4_control_msgs::DroneStateMarker &msg);
+  void trajectoryCallback(const px4_control_msgs::Trajectory &msg);
+
+  // Service Callbacks
+  bool enableControllerServCallback(std_srvs::SetBool::Request &req,
+                                    std_srvs::SetBool::Response &res);
 
   /**
    * @brief Loads the node parameters
    */
   void loadParameters();
+
+  /**
+   * @brief Sends a mode change request
+   * @param mode Flight mode:{ALTCTL, POSCTL, OFFBOARD, AUTO.TAKEOFF, AUTO.LAND}
+   */
+  void changeMode(const std::string &mode);
 
   /**
    * @brief If tracking is enabled, it publishes the UAS commands. Should run as
@@ -68,10 +91,20 @@ class PX4Pilot {
   rc_switch offboard_switch;
 
   // PX4 Controller
+  AcadosNMPC *nmpc_controller;
+  bool has_drone_state;
   bool controller_enabled;
   bool allow_offboard;
+  bool trajectory_loaded;
 
+  model_parameters model_params;
+  trajectory_setpoint drone_state;
+  std::vector<double> disturbances, weights;
+  std::vector<trajectory_setpoint> current_reference_trajectory;
+
+  // Mutexes
   std::unique_ptr<std::mutex> status_mutex;
   std::unique_ptr<std::mutex> rc_mutex;
+  std::unique_ptr<std::mutex> drone_state_mutex;
 };
 }  // namespace px4_ctrl
