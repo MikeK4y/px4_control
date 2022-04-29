@@ -1,0 +1,5 @@
+<launch>
+  <node name="px4_pilot_node" pkg="nmpc" type="px4_pilot_node" output="screen" required="true">
+    <rosparam command="load" file="$(find state_estimation)/cfg/f550_parameters.yaml"/>
+  </node>
+</launch>
