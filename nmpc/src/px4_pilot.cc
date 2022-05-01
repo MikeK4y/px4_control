@@ -129,8 +129,6 @@ void PX4Pilot::mavrosRCCallback(const mavros_msgs::RCIn::ConstPtr &msg) {
     // Disable controller
     ROS_INFO("Disabling controller");
     controller_enabled = false;
-  } else {
-    ROS_WARN("Cannot switch controller");
   }
 
   // Allow switching to Offboard
@@ -149,8 +147,6 @@ void PX4Pilot::mavrosRCCallback(const mavros_msgs::RCIn::ConstPtr &msg) {
                  offboard_switch.on_value &&
              allow_offboard && !is_offboard) {
     changeMode("OFFBOARD");
-  } else {
-    ROS_WARN("Cannot switch Offboard");
   }
 }
 
