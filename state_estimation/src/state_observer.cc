@@ -23,7 +23,7 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   is_initialized = false;
 
   // Initialize Sensor
-  odom_sensor = new MavrosOdometry(R_odom);
+  odom_sensor = new MavrosOdometry(R_odom, 30);
 
   /** TODO: Not sure about the initialization of the time stamp */
   past_cmd = Eigen::Vector4d::Zero();

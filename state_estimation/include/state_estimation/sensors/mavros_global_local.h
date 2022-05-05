@@ -1,11 +1,16 @@
 #include "state_estimation/sensors/base_sensor.h"
 
 namespace px4_ctrl {
-class MavrosGlobalLocal : public BaseSensor {
+class MavrosGlocal : public BaseSensor {
  public:
-  MavrosGlobalLocal() {}
-  MavrosGlobalLocal(Eigen::MatrixXd R_mat) : R_mat_nom(R_mat), R_mat_cur(R_mat) {}
-  ~MavrosGlobalLocal() {}
+  MavrosGlocal() {}
+  MavrosGlocal(Eigen::MatrixXd R_mat, const int &N)
+      : R_mat_nom(R_mat), R_mat_cur(R_mat), res_size(N) {
+    res_full = false;
+    cyclic_index = 0;
+    res_Mat = Eigen::MatrixXd::Zero(R_mat.rows(), N);
+  }
+  ~MavrosGlocal() {}
 
   /**
    * @brief Returns the H matrix and expected sensor measurement for the
@@ -21,6 +26,12 @@ class MavrosGlobalLocal : public BaseSensor {
   }
 
   Eigen::MatrixXd getCurrentR() const { return R_mat_cur; }
+
+ protected:
+  Eigen::MatrixXd res_Mat;
+  bool res_full;
+  Eigen::Index cyclic_index;
+  int res_size;
 
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;

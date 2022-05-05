@@ -16,6 +16,7 @@
 // Sensors
 #include "state_estimation/sensors/marker.h"
 #include "state_estimation/sensors/mavros_odometry.h"
+#include "state_estimation/sensors/mavros_global_local.h"
 
 // Common
 #include "state_estimation/common.h"
@@ -33,6 +34,7 @@ class StateObserver {
  private:
   // ROS Subscribers
   ros::Subscriber odom_sub;
+  ros::Subscriber glocal_sub;
   ros::Subscriber att_ctrl_sub;
   ros::Subscriber vel_ctrl_sub;
   ros::Subscriber marker_sub;
@@ -46,6 +48,7 @@ class StateObserver {
 
   // Callbacks
   void odomCallback(const nav_msgs::Odometry &msg);
+  void glocalCallback(const nav_msgs::Odometry &msg);
   void markerCallback(const geometry_msgs::PoseStamped &msg);
   void attCtrlCallback(const mavros_msgs::AttitudeTarget &msg);
   void velCtrlCallback(const mavros_msgs::PositionTarget &msg);
@@ -103,6 +106,7 @@ class StateObserver {
   static const int state_size = 20;
   static const int error_state_size = 18;
   static const int odom_size = 10;
+  static const int glocal_size = 7;
   static const int marker_size = 7;
 
   // Keep last measured q from marker
@@ -134,6 +138,7 @@ class StateObserver {
 
   // Sensors
   MavrosOdometry *odom_sensor;
+  MavrosGlocal *glocal_sensor;
   MarkerPose *marker_sensor;
 
   // PX4 Status

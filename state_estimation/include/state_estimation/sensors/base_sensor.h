@@ -4,15 +4,19 @@
 #include <eigen3/Eigen/Dense>
 
 // ROS
-#include "tf/transform_datatypes.h"
-
 #include "state_estimation/common.h"
+#include "tf/transform_datatypes.h"
 
 namespace px4_ctrl {
 class BaseSensor {
  public:
   BaseSensor() {}
-  BaseSensor(Eigen::MatrixXd R_mat) : R_mat_nom(R_mat), R_mat_cur(R_mat) {}
+  BaseSensor(const Eigen::MatrixXd &R_mat, const int &N)
+      : R_mat_nom(R_mat), R_mat_cur(R_mat), res_size(N) {
+    res_full = false;
+    cyclic_index = 0;
+    res_Mat = Eigen::MatrixXd::Zero(R_mat.rows(), N);
+  }
   ~BaseSensor() {}
 
   /**
@@ -26,7 +30,16 @@ class BaseSensor {
                               Eigen::MatrixXd &H_mat,
                               Eigen::MatrixXd &y_expected) {}
 
+  virtual void updateR(const Eigen::MatrixXd &innov,
+                       const Eigen::MatrixXd &Py) {}
+
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
+
+ protected:
+  Eigen::MatrixXd res_Mat;
+  bool res_full;
+  Eigen::Index cyclic_index;
+  int res_size;
 };
 }  // namespace px4_ctrl

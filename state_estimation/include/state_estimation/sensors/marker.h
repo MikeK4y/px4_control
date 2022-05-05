@@ -4,7 +4,12 @@ namespace px4_ctrl {
 class MarkerPose : public BaseSensor {
  public:
   MarkerPose() {}
-  MarkerPose(Eigen::MatrixXd R_mat) : R_mat_nom(R_mat), R_mat_cur(R_mat) {}
+  MarkerPose(Eigen::MatrixXd R_mat, const int &N)
+      : R_mat_nom(R_mat), R_mat_cur(R_mat), res_size(N) {
+    res_full = false;
+    cyclic_index = 0;
+    res_Mat = Eigen::MatrixXd::Zero(R_mat.rows(), N);
+  }
   ~MarkerPose() {}
 
   /**
@@ -21,6 +26,12 @@ class MarkerPose : public BaseSensor {
   }
 
   Eigen::MatrixXd getCurrentR() const { return R_mat_cur; }
+
+ protected:
+  Eigen::MatrixXd res_Mat;
+  bool res_full;
+  Eigen::Index cyclic_index;
+  int res_size;
 
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
