@@ -103,8 +103,8 @@ class StateObserver {
   ros::Time past_state_time;
   bool is_initialized;
   bool marker_found;
-  static const int state_size = 20;
-  static const int error_state_size = 18;
+  static const int state_size = 23;
+  static const int error_state_size = 21;
   static const int odom_size = 10;
   static const int glocal_size = 7;
   static const int marker_size = 7;

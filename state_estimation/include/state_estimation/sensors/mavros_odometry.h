@@ -55,8 +55,8 @@ class MavrosOdometry : public BaseSensor {
   Eigen::Index cyclic_index;
   int res_size;
   static const int measurement_size = 10;
-  static const int state_size = 20;
-  static const int error_state_size = 18;
+  static const int state_size = 23;
+  static const int error_state_size = 21;
 
   /**
    * @brief Calculates the H matrix using the predicted state
@@ -77,6 +77,9 @@ class MavrosOdometry : public BaseSensor {
     // Position
     H_mat.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
 
+    // Random walk bias
+    H_mat.block(0, 13, 3, 3) = Eigen::Matrix3d::Identity();
+
     // Velocity
     H_mat.block(3, 3, 3, 3) = state.attitude.toRotationMatrix().transpose();
     H_mat.block(3, 6, 3, 1) = R_w * state.velocity;
@@ -88,34 +91,7 @@ class MavrosOdometry : public BaseSensor {
     H_mat.block(6, 6, 4, 4) = Eigen::Matrix4d::Identity();
 
     // Error state derivative of the state
-    Eigen::Matrix<double, state_size, error_state_size> Xddx;
-    Xddx.setZero();
-
-    // Position
-    Xddx.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Velocity
-    Xddx.block(3, 3, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Attitude
-    Xddx(6, 6) = -0.5 * state.attitude.x();
-    Xddx(6, 7) = -0.5 * state.attitude.y();
-    Xddx(6, 8) = -0.5 * state.attitude.z();
-
-    Xddx(7, 6) = 0.5 * state.attitude.w();
-    Xddx(7, 7) = -0.5 * state.attitude.z();
-    Xddx(7, 8) = 0.5 * state.attitude.y();
-
-    Xddx(8, 6) = 0.5 * state.attitude.z();
-    Xddx(8, 7) = 0.5 * state.attitude.w();
-    Xddx(8, 8) = -0.5 * state.attitude.x();
-
-    Xddx(9, 6) = -0.5 * state.attitude.y();
-    Xddx(9, 7) = 0.5 * state.attitude.x();
-    Xddx(9, 8) = 0.5 * state.attitude.w();
-
-    // Disturbances
-    Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
+    Eigen::MatrixXd Xddx = getXddx(state, state_size, error_state_size);
 
     return H_mat * Xddx;
   }
@@ -132,7 +108,7 @@ class MavrosOdometry : public BaseSensor {
 
     Eigen::Matrix<double, measurement_size, 1> y_exp;
 
-    y_exp.segment(0, 3) = state.position;
+    y_exp.segment(0, 3) = state.position + state.random_walk_bias;
     y_exp.segment(3, 3) = v_w;
     y_exp(6) = state.attitude.w();
     y_exp(7) = state.attitude.x();

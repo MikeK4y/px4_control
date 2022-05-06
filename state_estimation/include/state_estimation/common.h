@@ -10,6 +10,7 @@ struct eskf_state {
   Eigen::Vector3d velocity;
   Eigen::Quaterniond attitude;
   Eigen::Vector3d disturbances;
+  Eigen::Vector3d random_walk_bias;
   Eigen::Vector3d marker_position;
   Eigen::Quaterniond marker_orientation;
 };
@@ -56,6 +57,70 @@ static inline Eigen::Matrix3d eulerToRotMat(const double &yaw,
             Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
 
   return Rot_mat;
+}
+
+/**
+ * @brief Gets the error state derivative of the state
+ * @param state The current state
+ * @param state_size The size of the state
+ * @param error_state_size The size of the error state
+ * @returns The error state derivative of the state
+ */
+static inline Eigen::MatrixXd getXddx(const eskf_state state,
+                                      const int state_size,
+                                      const int error_state_size) {
+  Eigen::MatrixXd Xddx = Eigen::MatrixXd::Zero(state_size, error_state_size);
+
+  // Position
+  Xddx.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Velocity
+  Xddx.block(3, 3, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Attitude
+  Xddx(6, 6) = -0.5 * state.attitude.x();
+  Xddx(6, 7) = -0.5 * state.attitude.y();
+  Xddx(6, 8) = -0.5 * state.attitude.z();
+
+  Xddx(7, 6) = 0.5 * state.attitude.w();
+  Xddx(7, 7) = -0.5 * state.attitude.z();
+  Xddx(7, 8) = 0.5 * state.attitude.y();
+
+  Xddx(8, 6) = 0.5 * state.attitude.z();
+  Xddx(8, 7) = 0.5 * state.attitude.w();
+  Xddx(8, 8) = -0.5 * state.attitude.x();
+
+  Xddx(9, 6) = -0.5 * state.attitude.y();
+  Xddx(9, 7) = 0.5 * state.attitude.x();
+  Xddx(9, 8) = 0.5 * state.attitude.w();
+
+  // Disturbances
+  Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Biases
+  Xddx.block(13, 12, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Marker position
+  Xddx.block(16, 15, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Marker Orientation
+  Xddx(19, 18) = -0.5 * state.marker_orientation.x();
+  Xddx(19, 19) = -0.5 * state.marker_orientation.y();
+  Xddx(19, 20) = -0.5 * state.marker_orientation.z();
+
+  Xddx(20, 18) = 0.5 * state.marker_orientation.w();
+  Xddx(20, 19) = -0.5 * state.marker_orientation.z();
+  Xddx(20, 20) = 0.5 * state.marker_orientation.y();
+
+  Xddx(21, 18) = 0.5 * state.marker_orientation.z();
+  Xddx(21, 19) = 0.5 * state.marker_orientation.w();
+  Xddx(21, 20) = -0.5 * state.marker_orientation.x();
+
+  Xddx(22, 18) = -0.5 * state.marker_orientation.y();
+  Xddx(22, 19) = 0.5 * state.marker_orientation.x();
+  Xddx(22, 20) = 0.5 * state.marker_orientation.w();
+
+  return Xddx;
 }
 
 /**

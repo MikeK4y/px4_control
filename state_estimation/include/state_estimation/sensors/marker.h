@@ -27,6 +27,27 @@ class MarkerPose : public BaseSensor {
 
   Eigen::MatrixXd getCurrentR() const { return R_mat_cur; }
 
+  void updateR(const Eigen::MatrixXd &innov, const Eigen::MatrixXd &Py) {
+    res_Mat.block(0, cyclic_index, innov.rows(), innov.cols()) = innov;
+    cyclic_index++;
+
+    if (cyclic_index >= res_size) {
+      cyclic_index = 0;
+      res_full = true;
+    }
+
+    if (res_full) {
+      Eigen::MatrixXd R_hat = res_Mat * res_Mat.transpose() - Py;
+
+      for (size_t i = 0; i < R_hat.rows(); i++) {
+        if (R_hat(i, i) > R_mat_nom(i, i))
+          R_mat_cur(i, i) = R_hat(i, i);
+        else
+          R_mat_cur(i, i) = R_mat_nom(i, i);
+      }
+    }
+  }
+
  protected:
   Eigen::MatrixXd res_Mat;
   bool res_full;
@@ -36,8 +57,8 @@ class MarkerPose : public BaseSensor {
  private:
   Eigen::MatrixXd R_mat_nom, R_mat_cur;
   static const int measurement_size = 7;
-  static const int state_size = 20;
-  static const int error_state_size = 18;
+  static const int state_size = 23;
+  static const int error_state_size = 21;
 
   /**
    * @brief Calculates the H matrix using the predicted state
@@ -70,63 +91,16 @@ class MarkerPose : public BaseSensor {
     H_mat.block(3, 9, 4, 1) = -dpqdpz(state.marker_orientation);
 
     // Marker Position
-    H_mat.block(0, 13, 3, 3) = state.attitude.toRotationMatrix().transpose();
+    H_mat.block(0, 16, 3, 3) = state.attitude.toRotationMatrix().transpose();
 
     // Marker Orientation
-    H_mat.block(3, 16, 4, 1) = dpqdqw(state.attitude.inverse());
-    H_mat.block(3, 17, 4, 1) = dpqdqx(state.attitude.inverse());
-    H_mat.block(3, 18, 4, 1) = dpqdqy(state.attitude.inverse());
-    H_mat.block(3, 19, 4, 1) = dpqdqz(state.attitude.inverse());
+    H_mat.block(3, 19, 4, 1) = dpqdqw(state.attitude.inverse());
+    H_mat.block(3, 20, 4, 1) = dpqdqx(state.attitude.inverse());
+    H_mat.block(3, 21, 4, 1) = dpqdqy(state.attitude.inverse());
+    H_mat.block(3, 22, 4, 1) = dpqdqz(state.attitude.inverse());
 
     // Error state derivative of the state
-    Eigen::Matrix<double, state_size, error_state_size> Xddx;
-    Xddx.setZero();
-
-    // Position
-    Xddx.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Velocity
-    Xddx.block(3, 3, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Attitude
-    Xddx(6, 6) = -0.5 * state.attitude.x();
-    Xddx(6, 7) = -0.5 * state.attitude.y();
-    Xddx(6, 8) = -0.5 * state.attitude.z();
-
-    Xddx(7, 6) = 0.5 * state.attitude.w();
-    Xddx(7, 7) = -0.5 * state.attitude.z();
-    Xddx(7, 8) = 0.5 * state.attitude.y();
-
-    Xddx(8, 6) = 0.5 * state.attitude.z();
-    Xddx(8, 7) = 0.5 * state.attitude.w();
-    Xddx(8, 8) = -0.5 * state.attitude.x();
-
-    Xddx(9, 6) = -0.5 * state.attitude.y();
-    Xddx(9, 7) = 0.5 * state.attitude.x();
-    Xddx(9, 8) = 0.5 * state.attitude.w();
-
-    // Disturbances
-    Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Marker position
-    Xddx.block(13, 12, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Marker orientaion
-    Xddx(16, 15) = -0.5 * state.marker_orientation.x();
-    Xddx(16, 16) = -0.5 * state.marker_orientation.y();
-    Xddx(16, 17) = -0.5 * state.marker_orientation.z();
-
-    Xddx(17, 15) = 0.5 * state.marker_orientation.w();
-    Xddx(17, 16) = -0.5 * state.marker_orientation.z();
-    Xddx(17, 17) = 0.5 * state.marker_orientation.y();
-
-    Xddx(18, 15) = 0.5 * state.marker_orientation.z();
-    Xddx(18, 16) = 0.5 * state.marker_orientation.w();
-    Xddx(18, 17) = -0.5 * state.marker_orientation.x();
-
-    Xddx(19, 15) = -0.5 * state.marker_orientation.y();
-    Xddx(19, 16) = 0.5 * state.marker_orientation.x();
-    Xddx(19, 17) = 0.5 * state.marker_orientation.w();
+    Eigen::MatrixXd Xddx = getXddx(state, state_size, error_state_size);
 
     return H_mat * Xddx;
   }

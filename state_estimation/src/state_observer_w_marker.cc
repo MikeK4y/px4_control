@@ -13,8 +13,8 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   // Setup Subscribers
   odom_sub = nh.subscribe("/mavros/local_position/odom", 1,
                           &StateObserver::odomCallback, this);
-  glocal_sub = nh.subscribe("/mavros/global_position/local", 1,
-                            &StateObserver::glocalCallback, this);
+  // glocal_sub = nh.subscribe("/mavros/global_position/local", 1,
+  //                           &StateObserver::glocalCallback, this);
   att_ctrl_sub = nh.subscribe("/mavros/setpoint_raw/attitude", 1,
                               &StateObserver::attCtrlCallback, this);
   vel_ctrl_sub = nh.subscribe("/mavros/setpoint_raw/local", 1,
@@ -35,8 +35,8 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
 
   // Initialize Sensors
   odom_sensor = new MavrosOdometry(R_odom, 30);
-  glocal_sensor = new MavrosGlocal(R_marker, 300);
-  marker_sensor = new MarkerPose(R_marker, 300);
+  // glocal_sensor = new MavrosGlocal(R_marker, 300);
+  marker_sensor = new MarkerPose(R_marker, 10);
 
   /** TODO: Not sure about the initialization of the time stamp */
   past_cmd = Eigen::Vector4d::Zero();
@@ -50,7 +50,7 @@ StateObserver::~StateObserver() {
             << odom_sensor->getCurrentR() << "\n";
 
   delete odom_sensor;
-  delete glocal_sensor;
+  // delete glocal_sensor;
   delete marker_sensor;
 }
 
@@ -79,20 +79,22 @@ void StateObserver::loadParameters() {
 
   // Observer parameters
   // Error covariance
-  std::vector<double> P_p, P_v, P_dq, P_fd, P_mp, P_mdq;
+  std::vector<double> P_p, P_v, P_dq, P_fd, P_rb, P_mp, P_mdq;
   nh_pvt.getParam("P_p", P_p);
   nh_pvt.getParam("P_v", P_v);
   nh_pvt.getParam("P_dq", P_dq);
   nh_pvt.getParam("P_fd", P_fd);
+  nh_pvt.getParam("P_rb", P_rb);
   nh_pvt.getParam("P_mp", P_mp);
   nh_pvt.getParam("P_mdq", P_mdq);
 
   // Process covariance
-  double Q_p, Q_v, Q_dq, Q_fd, Q_mp, Q_mdq;
+  double Q_p, Q_v, Q_dq, Q_fd, Q_rb, Q_mp, Q_mdq;
   nh_pvt.param("Q_p", Q_p, 0.1);
   nh_pvt.param("Q_v", Q_v, 0.1);
   nh_pvt.param("Q_dq", Q_dq, 0.1);
   nh_pvt.param("Q_fd", Q_fd, 0.1);
+  nh_pvt.param("Q_rb", Q_rb, 0.1);
   nh_pvt.param("Q_mp", Q_mp, 0.001);
   nh_pvt.param("Q_mdq", Q_mdq, 0.001);
 
@@ -116,8 +118,10 @@ void StateObserver::loadParameters() {
   P_mat.block(9, 9, 3, 3).diagonal() =
       Eigen::Vector3d(P_fd[0], P_fd[1], P_fd[2]);
   P_mat.block(12, 12, 3, 3).diagonal() =
-      Eigen::Vector3d(P_mp[0], P_mp[1], P_mp[2]);
+      Eigen::Vector3d(P_rb[0], P_rb[1], P_rb[2]);
   P_mat.block(15, 15, 3, 3).diagonal() =
+      Eigen::Vector3d(P_mp[0], P_mp[1], P_mp[2]);
+  P_mat.block(18, 18, 3, 3).diagonal() =
       Eigen::Vector3d(P_mdq[0], P_mdq[1], P_mdq[2]);
 
   Q_mat.setZero();
@@ -125,8 +129,9 @@ void StateObserver::loadParameters() {
   Q_mat.block(3, 3, 3, 3) = Q_v * Eigen::Matrix3d::Identity();
   Q_mat.block(6, 6, 3, 3) = Q_dq * Eigen::Matrix3d::Identity();
   Q_mat.block(9, 9, 3, 3) = Q_fd * Eigen::Matrix3d::Identity();
-  Q_mat.block(12, 12, 3, 3) = Q_mp * Eigen::Matrix3d::Identity();
-  Q_mat.block(15, 15, 3, 3) = Q_mdq * Eigen::Matrix3d::Identity();
+  Q_mat.block(12, 12, 3, 3) = Q_rb * Eigen::Matrix3d::Identity();
+  Q_mat.block(15, 15, 3, 3) = Q_mp * Eigen::Matrix3d::Identity();
+  Q_mat.block(18, 18, 3, 3) = Q_mdq * Eigen::Matrix3d::Identity();
 
   R_odom.setZero();
   R_odom.block(0, 0, 3, 3).diagonal() =
@@ -173,101 +178,7 @@ void StateObserver::mavrosStatusCallback(
 
 // global/local Callback
 void StateObserver::glocalCallback(const nav_msgs::Odometry &msg) {}
-//   // Initialize state with the first message
-//   if (!is_initialized) {
-//     // Time
-//     past_state_time = msg.header.stamp;
 
-//     // Position
-//     state.position(0) = msg.pose.pose.position.x;
-//     state.position(1) = msg.pose.pose.position.y;
-//     state.position(2) = msg.pose.pose.position.z;
-
-//     state.velocity(0) = 0.0;
-//     state.velocity(1) = 0.0;
-//     state.velocity(2) = 0.0;
-
-//     // Disturbances
-//     state.disturbances(0) = 0.0;
-//     state.disturbances(1) = 0.0;
-//     state.disturbances(2) = 0.0;
-
-//     is_initialized = true;
-//   } else {
-//     /** TODO: There are big gaps in the odometry messages. In this case don't
-//      * propagate the state because it leads to large estimation errors. It's
-//      * better to re-initialize keeping the old error covariance*/
-//     double dt = (msg.header.stamp - past_state_time).toSec();
-//     if (dt > 0.5) {
-//       ROS_WARN("Large gap detected. Re-initializing");
-//       // Time
-//       past_state_time = msg.header.stamp;
-
-//       // Position
-//       state.position(0) = msg.pose.pose.position.x;
-//       state.position(1) = msg.pose.pose.position.y;
-//       state.position(2) = msg.pose.pose.position.z;
-
-//       // Attitude
-//       state.attitude = Eigen::Quaterniond(
-//           msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
-//           msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
-
-//       // Use the same error covariance but increase it
-//       P_mat = P_mat + 30 * dt * Q_mat;
-//     } else {
-//       // Prepare measurement
-//       Eigen::Matrix<double, odom_size, 1> y_odom;
-//       y_odom << msg.pose.pose.position.x, msg.pose.pose.position.y,
-//           msg.pose.pose.position.z, msg.pose.pose.orientation.w,
-//           msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,
-//           msg.pose.pose.orientation.z;
-
-//       // Run prediction and update time
-//       predict(msg.header.stamp);
-
-//       // Run correction
-//       Eigen::MatrixXd H_mat;
-//       Eigen::MatrixXd y_expected;
-//       odom_sensor->correctionData(state_pred, H_mat, y_expected);
-
-//       Eigen::MatrixXd S_inv =
-//           (H_mat * P_pred_mat * H_mat.transpose() +
-//           odom_sensor->getCurrentR())
-//               .inverse();
-
-//       Eigen::MatrixXd innovation = y_odom - y_expected;
-
-//       double e_squared = innovation.transpose().dot(S_inv * innovation);
-
-//       // Measurement gating
-//       if (e_squared < 23.589) {
-//         Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S_inv;
-
-//         error_state = K_mat * innovation;
-
-//         // Update state
-//         std::future<void> state_update_f =
-//             std::async(std::launch::async, &StateObserver::correctState,
-//             this);
-
-//         // Update P marix and make sure it's symmetric
-//         Eigen::MatrixXd IKH_mat =
-//             Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
-//             K_mat * H_mat;
-//         P_mat = IKH_mat * P_pred_mat;
-//         P_mat = 0.5 * (P_mat + P_mat.transpose());
-
-//         // Publish state
-//         state_update_f.wait();
-//       } else {
-//         ROS_WARN("Odometry measurement was rejected");
-//       }
-
-//       publishState(msg.header.stamp);
-//     }
-//   }
-// }
 
 // Odometry Callback
 void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
@@ -299,6 +210,11 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
     state.disturbances(0) = 0.0;
     state.disturbances(1) = 0.0;
     state.disturbances(2) = 0.0;
+
+    // Biases
+    state.random_walk_bias(0) = 0.0;
+    state.random_walk_bias(1) = 0.0;
+    state.random_walk_bias(2) = 0.0;
 
     is_initialized = true;
   } else {
@@ -357,6 +273,7 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
       double e_squared = (innovation.transpose() * S_inv * innovation).sum();
 
       // Measurement gating
+      /** TODO: Load the X critical value */
       if (e_squared < 23.589) {
         Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S_inv;
 
@@ -424,30 +341,43 @@ void StateObserver::markerCallback(const geometry_msgs::PoseStamped &msg) {
       predict(msg.header.stamp);
 
       // Run correction
-      Eigen::MatrixXd H_mat(7, 18);
-      Eigen::MatrixXd y_expected(7, 1);
+      Eigen::MatrixXd H_mat;
+      Eigen::MatrixXd y_expected;
       marker_sensor->correctionData(state_pred, H_mat, y_expected);
 
-      Eigen::MatrixXd S =
-          H_mat * P_pred_mat * H_mat.transpose() + marker_sensor->getCurrentR();
-      Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S.inverse();
+      Eigen::MatrixXd P_y = H_mat * P_pred_mat * H_mat.transpose();
+      Eigen::MatrixXd S_inv = (P_y + marker_sensor->getCurrentR()).inverse();
+      Eigen::MatrixXd innovation = y_marker - y_expected;
+      marker_sensor->updateR(innovation, P_y);
 
-      error_state = K_mat * (y_marker - y_expected);
-      // Zero out any change to the drone's pitch and roll that might affect the
-      // drone's stability
-      error_state(6) = 0.0;
-      error_state(7) = 0.0;
+      double e_squared = (innovation.transpose() * S_inv * innovation).sum();
 
-      // Update state
-      std::future<void> state_update_f =
-          std::async(std::launch::async, &StateObserver::correctState, this);
+      // Measurement gating
+      if (e_squared < 23.589) {
+        Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S_inv;
 
-      // Update P marix and make sure it's symmetric
-      Eigen::MatrixXd IKH_mat =
-          Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
-          K_mat * H_mat;
-      P_mat = IKH_mat * P_pred_mat;
-      P_mat = 0.5 * (P_mat + P_mat.transpose());
+        error_state = K_mat * innovation;
+        // Zero out any change to the drone's pitch and roll that might affect
+        // the drone's stability
+        error_state(6) = 0.0;
+        error_state(7) = 0.0;
+
+        // Update state
+        std::future<void> state_update_f =
+            std::async(std::launch::async, &StateObserver::correctState, this);
+
+        // Update P marix and make sure it's symmetric
+        Eigen::MatrixXd IKH_mat =
+            Eigen::MatrixXd::Identity(error_state_size, error_state_size) -
+            K_mat * H_mat;
+        P_mat = IKH_mat * P_pred_mat;
+        P_mat = 0.5 * (P_mat + P_mat.transpose());
+
+        // Publish state
+        state_update_f.wait();
+      } else {
+        ROS_WARN("Marker measurement was rejected");
+      }
     }
   }
 }
@@ -566,6 +496,7 @@ eskf_state StateObserver::addUpdate(const eskf_state &state,
                          state.attitude.z() + state_update(9));
   updated_state.attitude.normalize();
   updated_state.disturbances = state.disturbances;
+  updated_state.random_walk_bias = state.random_walk_bias;
   updated_state.marker_position = state.marker_position;
   updated_state.marker_orientation = state.marker_orientation;
 
@@ -608,11 +539,14 @@ void StateObserver::updatePpred(const double &dt, const Eigen::Vector4d &cmd) {
   // Disturbances
   F_mat.block(9, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
-  // Marker position
+  // Random walk bias
   F_mat.block(12, 12, 3, 3) = Eigen::Matrix3d::Identity();
 
-  // Marker orientation
+  // Marker position
   F_mat.block(15, 15, 3, 3) = Eigen::Matrix3d::Identity();
+
+  // Marker orientation
+  F_mat.block(18, 18, 3, 3) = Eigen::Matrix3d::Identity();
 
   // Update P_pred
   P_pred_mat = F_mat * P_mat * F_mat.transpose() + Q_mat;
@@ -652,15 +586,20 @@ void StateObserver::correctState() {
       clipValue(state_pred.disturbances(2) + error_state(11),
                 -disturbance_limit, disturbance_limit);
 
+  // Random walk bias
+  state.random_walk_bias(0) = state_pred.random_walk_bias(0) + error_state(12);
+  state.random_walk_bias(1) = state_pred.random_walk_bias(1) + error_state(13);
+  state.random_walk_bias(2) = state_pred.random_walk_bias(2) + error_state(14);
+
   if (marker_found) {
     // Marker position
-    state.marker_position(0) = state_pred.marker_position(0) + error_state(12);
-    state.marker_position(1) = state_pred.marker_position(1) + error_state(13);
-    state.marker_position(2) = state_pred.marker_position(2) + error_state(14);
+    state.marker_position(0) = state_pred.marker_position(0) + error_state(15);
+    state.marker_position(1) = state_pred.marker_position(1) + error_state(16);
+    state.marker_position(2) = state_pred.marker_position(2) + error_state(17);
 
     // Marker orientation
     Eigen::Vector3d thetas_marker;
-    thetas_marker << error_state(15), error_state(16), error_state(17);
+    thetas_marker << error_state(18), error_state(19), error_state(20);
     angle = thetas_marker.norm();
     if (angle > 0) {
       thetas_marker = thetas_marker / angle;
@@ -699,6 +638,11 @@ void StateObserver::publishState(ros::Time time) {
   msg.disturbances.x = state.disturbances(0);
   msg.disturbances.y = state.disturbances(1);
   msg.disturbances.z = state.disturbances(2);
+
+  // Disturbances
+  msg.random_walk_bias.x = state.random_walk_bias(0);
+  msg.random_walk_bias.y = state.random_walk_bias(1);
+  msg.random_walk_bias.z = state.random_walk_bias(2);
 
   // Marker
   msg.marker_found.data = marker_found;
