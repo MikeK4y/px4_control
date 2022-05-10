@@ -198,7 +198,10 @@ void PX4Pilot::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
 
     current_reference_trajectory.push_back(setpoint);
   }
+  // Stop controller while loading the new trajectory
+  controller_enabled = false;
   nmpc_controller->setTrajectory(current_reference_trajectory);
+  controller_enabled = true;
 
   ROS_INFO("Trajectory loaded");
   trajectory_loaded = true;
