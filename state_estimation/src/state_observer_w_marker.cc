@@ -47,7 +47,10 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
 
 StateObserver::~StateObserver() {
   std::cout << "Odometry sensor last R = \n"
-            << odom_sensor->getCurrentR() << "\n";
+            << odom_sensor->getCurrentR() << "\n\n";
+
+  std::cout << "Marker sensor last R = \n"
+            << marker_sensor->getCurrentR() << "\n\n";
 
   delete odom_sensor;
   // delete glocal_sensor;
@@ -108,6 +111,10 @@ void StateObserver::loadParameters() {
   std::vector<double> R_marker_p, R_marker_q;
   nh_pvt.getParam("R_marker_p", R_marker_p);
   nh_pvt.getParam("R_marker_q", R_marker_q);
+
+  // Chi critical values
+  nh_pvt.param("odom_chi_critical", odom_chi_critical, 23.589);
+  nh_pvt.param("marker_chi_critical", marker_chi_critical, 18.548);
 
   // Initialize matrices
   P_mat.setZero();
@@ -178,7 +185,6 @@ void StateObserver::mavrosStatusCallback(
 
 // global/local Callback
 void StateObserver::glocalCallback(const nav_msgs::Odometry &msg) {}
-
 
 // Odometry Callback
 void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
@@ -273,8 +279,7 @@ void StateObserver::odomCallback(const nav_msgs::Odometry &msg) {
       double e_squared = (innovation.transpose() * S_inv * innovation).sum();
 
       // Measurement gating
-      /** TODO: Load the X critical value */
-      if (e_squared < 23.589) {
+      if (e_squared < odom_chi_critical) {
         Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S_inv;
 
         error_state = K_mat * innovation;
@@ -353,7 +358,7 @@ void StateObserver::markerCallback(const geometry_msgs::PoseStamped &msg) {
       double e_squared = (innovation.transpose() * S_inv * innovation).sum();
 
       // Measurement gating
-      if (e_squared < 23.589) {
+      if (e_squared < marker_chi_critical) {
         Eigen::MatrixXd K_mat = P_pred_mat * H_mat.transpose() * S_inv;
 
         error_state = K_mat * innovation;

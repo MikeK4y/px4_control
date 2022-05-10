@@ -135,6 +135,8 @@ class StateObserver {
   double k_thrust;
   double gravity;
   double disturbance_limit;
+  double odom_chi_critical;
+  double marker_chi_critical;
 
   // Sensors
   MavrosOdometry *odom_sensor;

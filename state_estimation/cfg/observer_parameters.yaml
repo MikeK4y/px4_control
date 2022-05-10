@@ -24,3 +24,7 @@ R_odom_q: [0.001, 0.001, 0.001, 0.001]
 # Marker covariance
 R_marker_p: [0.01, 0.01, 0.01]
 R_marker_q: [0.01, 0.01, 0.01, 0.01]
+
+# Chi critical values
+odom_chi_critical: 23.589
+marker_chi_critical: 18.548
