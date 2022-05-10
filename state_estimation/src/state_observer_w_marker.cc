@@ -17,8 +17,6 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   //                           &StateObserver::glocalCallback, this);
   att_ctrl_sub = nh.subscribe("/mavros/setpoint_raw/attitude", 1,
                               &StateObserver::attCtrlCallback, this);
-  vel_ctrl_sub = nh.subscribe("/mavros/setpoint_raw/local", 1,
-                              &StateObserver::velCtrlCallback, this);
   marker_sub =
       nh.subscribe("/marker/pose", 1, &StateObserver::markerCallback, this);
   mavros_status_sub = nh.subscribe("/mavros/state", 1,
@@ -42,7 +40,6 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   past_cmd = Eigen::Vector4d::Zero();
   latest_cmd = Eigen::Vector4d::Zero();
   latest_cmd_time = ros::Time::now();
-  vel_cmd_time = ros::Time::now();
 }
 
 StateObserver::~StateObserver() {
@@ -170,11 +167,6 @@ void StateObserver::attCtrlCallback(const mavros_msgs::AttitudeTarget &msg) {
   past_cmd = latest_cmd;
   latest_cmd = cmd;
   latest_cmd_time = msg.header.stamp;
-}
-
-// Velocity Control Callback
-void StateObserver::velCtrlCallback(const mavros_msgs::PositionTarget &msg) {
-  vel_cmd_time = msg.header.stamp;
 }
 
 // Status Callback
@@ -397,18 +389,13 @@ void StateObserver::predict(ros::Time pred_time) {
    * Using a circular buffer and rerun the filter will be a much better
    * solution*/
   if (dt > 0.0) {
-    /** TODO: When the flight status is changed to POSCTL the z disturbance
-     * starts increasing to match gravity. So when it is switched back to
-     * OFFBOARD the first few inputs are effected by this increased disturbance
-     * causing a rapid decrease in altitude. The nmpc is set so that it will
-     * send out zero velocity commands if it's not in OFFBOARD mode. So in that
-     * case update the state accordingly. For now it basically skips update */
-    if ((pred_time - vel_cmd_time).toSec() < 0.5 &
-        (current_status.mode == "POSCTL" ||
-         current_status.mode == "AUTO.LOITER")) {
-      state_pred = state;
-      P_pred_mat = P_mat + Q_mat;
-    } else {
+    /** TODO: When the flight status is changed out of OFFBOARD the z
+     * disturbance starts increasing to match gravity. So when it is switched
+     * back to OFFBOARD the first few inputs are effected by this increased
+     * disturbance causing a rapid decrease in altitude. The nmpc is set so that
+     * it will send out zero velocity commands if it's not in OFFBOARD mode. So
+     * in that case update the state accordingly. For now skip update */
+    if (current_status.mode == "OFFBOARD") {
       // Find input for the prediction time step
       // If there's been a while without a new cmd set them to zero
       Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
@@ -433,6 +420,9 @@ void StateObserver::predict(ros::Time pred_time) {
       Eigen::VectorXd k4 = getSystemDerivative(addUpdate(state, dt * k3), cmd);
 
       state_pred = addUpdate(state, dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6);
+    } else {
+      state_pred = state;
+      P_pred_mat = P_mat + Q_mat;
     }
     past_state_time = pred_time;
   } else {

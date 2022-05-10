@@ -5,9 +5,9 @@
 
 // ROS messages
 #include <mavros_msgs/AttitudeTarget.h>
-#include <mavros_msgs/PositionTarget.h>
-#include <nav_msgs/Odometry.h>
 #include <mavros_msgs/State.h>
+#include <nav_msgs/Odometry.h>
+
 #include "px4_control_msgs/DroneStateMarker.h"
 
 // Eigen
@@ -15,8 +15,8 @@
 
 // Sensors
 #include "state_estimation/sensors/marker.h"
-#include "state_estimation/sensors/mavros_odometry.h"
 #include "state_estimation/sensors/mavros_global_local.h"
+#include "state_estimation/sensors/mavros_odometry.h"
 
 // Common
 #include "state_estimation/common.h"
@@ -36,7 +36,6 @@ class StateObserver {
   ros::Subscriber odom_sub;
   ros::Subscriber glocal_sub;
   ros::Subscriber att_ctrl_sub;
-  ros::Subscriber vel_ctrl_sub;
   ros::Subscriber marker_sub;
   ros::Subscriber mavros_status_sub;
 
@@ -51,7 +50,6 @@ class StateObserver {
   void glocalCallback(const nav_msgs::Odometry &msg);
   void markerCallback(const geometry_msgs::PoseStamped &msg);
   void attCtrlCallback(const mavros_msgs::AttitudeTarget &msg);
-  void velCtrlCallback(const mavros_msgs::PositionTarget &msg);
   void mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg);
 
   /** @brief Loads the model parameters
@@ -125,7 +123,6 @@ class StateObserver {
   // input = [yaw_rate, pitch, roll, thrust]T
   Eigen::Vector4d past_cmd, latest_cmd;
   ros::Time latest_cmd_time;
-  ros::Time vel_cmd_time;
 
   // Model parameters
   Eigen::Vector3d gravity_vector;
