@@ -389,22 +389,14 @@ void StateObserver::predict(ros::Time pred_time) {
    * Using a circular buffer and rerun the filter will be a much better
    * solution*/
   if (dt > 0.0) {
-    /** TODO: When the flight status is changed out of OFFBOARD the z
-     * disturbance starts increasing to match gravity. So when it is switched
-     * back to OFFBOARD the first few inputs are effected by this increased
-     * disturbance causing a rapid decrease in altitude. The nmpc is set so that
-     * it will send out zero velocity commands if it's not in OFFBOARD mode. So
-     * in that case update the state accordingly. For now skip update */
-    if (current_status.mode == "OFFBOARD") {
-      // Find input for the prediction time step
-      // If there's been a while without a new cmd set them to zero
+    // Find input for the prediction time step
+    // If there's been a while without a new cmd set them to zero
+    if ((pred_time - latest_cmd_time).toSec() < 0.5) {
       Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
-      if ((pred_time - latest_cmd_time).toSec() < 0.5) {
-        double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
-        double dt_p = dt_l < dt ? dt - dt_l : 0.0;
+      double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
+      double dt_p = dt_l < dt ? dt - dt_l : 0.0;
 
-        cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
-      }
+      cmd = (dt_p / dt) * past_cmd + (dt_l / dt) * latest_cmd;
 
       // Run error covariance prediction asynchronously
       std::future<void> p_pred_update_f =
