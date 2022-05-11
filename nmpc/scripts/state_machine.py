@@ -20,7 +20,7 @@ class StateMachineNode():
 
         # Check that NMPC is running by checking that a service is available
         rp.loginfo('Checking that controller is up')
-        # rp.wait_for_service('/enable_controller')
+        rp.wait_for_service('/enable_controller')
         rp.loginfo('NMPC is up')
 
         # Setpoint

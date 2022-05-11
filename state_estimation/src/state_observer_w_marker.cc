@@ -37,8 +37,8 @@ StateObserver::StateObserver(ros::NodeHandle &nh) {
   marker_sensor = new MarkerPose(R_marker, 10);
 
   /** TODO: Not sure about the initialization of the time stamp */
-  past_cmd = Eigen::Vector4d::Zero();
-  latest_cmd = Eigen::Vector4d::Zero();
+  past_cmd = Eigen::Vector4d(0.0, 0.0, 0.0, -gravity / k_thrust);
+  latest_cmd = Eigen::Vector4d(0.0, 0.0, 0.0, -gravity / k_thrust);
   latest_cmd_time = ros::Time::now();
 }
 
@@ -164,7 +164,12 @@ void StateObserver::attCtrlCallback(const mavros_msgs::AttitudeTarget &msg) {
   Eigen::Vector4d cmd(msg.body_rate.z, p_cmd, r_cmd, (double)msg.thrust);
 
   // Update commands
-  past_cmd = latest_cmd;
+  // I need to set past_cmd == cmd because of the weird time stamps
+  if ((msg.header.stamp - latest_cmd_time).toSec() < 0.5)
+    past_cmd = latest_cmd;
+  else
+    past_cmd = cmd;
+
   latest_cmd = cmd;
   latest_cmd_time = msg.header.stamp;
 }
@@ -390,8 +395,9 @@ void StateObserver::predict(ros::Time pred_time) {
    * solution*/
   if (dt > 0.0) {
     // Find input for the prediction time step
-    // If there's been a while without a new cmd set them to zero
-    if ((pred_time - latest_cmd_time).toSec() < 0.5) {
+    // If there's been a while without a new cmd don't propagate model
+    if (current_status.mode == "OFFBOARD" &&
+        ((pred_time - latest_cmd_time).toSec() < 0.5)) {
       Eigen::Vector4d cmd = Eigen::Vector4d::Zero();
       double dt_l = clipValue((pred_time - latest_cmd_time).toSec(), 0.0, dt);
       double dt_p = dt_l < dt ? dt - dt_l : 0.0;
