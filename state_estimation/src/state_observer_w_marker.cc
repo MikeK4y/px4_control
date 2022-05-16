@@ -649,7 +649,8 @@ void StateObserver::publishState(ros::Time time) {
     msg.marker_pose.orientation.x = state.marker_orientation.x();
     msg.marker_pose.orientation.y = state.marker_orientation.y();
     msg.marker_pose.orientation.z = state.marker_orientation.z();
-  }
+  } else
+    msg.marker_pose.orientation.w = 1.0;
 
   // // Error covariance
   // for (size_t i = 0; i < P_mat.rows(); i++) {
