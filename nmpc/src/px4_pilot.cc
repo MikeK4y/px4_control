@@ -381,6 +381,8 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           att_cmd.header.stamp = ros::Time::now();
           att_control_pub.publish(att_cmd);
         } else {
+          /** TODO: This doesn't work. The RC Callback set the controller flag
+           * back to true */
           ROS_ERROR("NMPC failed to return command. Hovering");
           controller_enabled = false;
           vel_cmd.header.stamp = ros::Time::now();

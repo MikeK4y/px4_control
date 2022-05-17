@@ -1,6 +1,4 @@
 #!/usr/bin/python3
-import threading
-
 import rospy as rp
 import numpy as np
 import quaternion
@@ -30,6 +28,7 @@ class StateMachineNode():
                                            [0.0, 0.0, 0.0,  1.0]])
         self.marker_setpoint_sent = False
         self.marker_position = None
+        self.marker_orientation = None
 
         # Subscribers
         self.state_sub = rp.Subscriber(
@@ -61,6 +60,9 @@ class StateMachineNode():
                 H_world_marker[0:3, 0:3] = quaternion.as_rotation_matrix(
                     marker_att)
 
+                self.marker_orientation = np.arctan2(
+                    H_world_marker[1, 0], H_world_marker[0, 0])
+
                 # Transform setpoint to world frame
                 H_world_setpoint = np.matmul(
                     H_world_marker, self.H_marker_setpoint)
@@ -89,9 +91,18 @@ class StateMachineNode():
                                                msg.marker_pose.position.y,
                                                msg.marker_pose.position.z])
 
-                d = marker_current_pos - self.marker_position
+                marker_att = np.quaternion(msg.marker_pose.orientation.w,
+                                           msg.marker_pose.orientation.x,
+                                           msg.marker_pose.orientation.y,
+                                           msg.marker_pose.orientation.z).normalized()
+                R = quaternion.as_rotation_matrix(marker_att)
 
-                if np.dot(d, d) > 0.02:
+                marker_current_orientation = np.arctan2(R[1, 0], R[0, 0])
+
+                d_o = marker_current_orientation - self.marker_orientation
+                d_p = marker_current_pos - self.marker_position
+
+                if np.dot(d_p, d_p) > 0.02 or abs(d_o) > 0.15:
                     rp.logwarn(
                         'The marker\'s position changed too much. Sending new setpoint')
                     self.marker_setpoint_sent = False
