@@ -96,6 +96,7 @@ class PX4Pilot {
   bool controller_enabled;
   bool allow_offboard;
   bool trajectory_loaded;
+  ros::Time last_state_time;
 
   model_parameters model_params;
   trajectory_setpoint drone_state;

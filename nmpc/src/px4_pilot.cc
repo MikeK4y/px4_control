@@ -177,6 +177,7 @@ void PX4Pilot::droneStateCallback(
   disturbances.push_back(msg.disturbances.y);
   disturbances.push_back(msg.disturbances.z);
 
+  last_state_time = msg.header.stamp;
   has_drone_state = !has_drone_state ? true : has_drone_state;
 }
 
@@ -340,6 +341,14 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
 
     if (got_RC && (ros::Time::now() - last_RC_time).toSec() > 0.5) {
       got_RC = false;
+    }
+
+    if ((ros::Time::now() - last_state_time).toSec() > 0.5) {
+      ROS_WARN(
+          "Have not received the drone state for a while!!! Switching to "
+          "Position Control");
+      changeMode("POSCTL");
+      continue;
     }
 
     if (!drone_connected) {
