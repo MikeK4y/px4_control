@@ -170,12 +170,12 @@ void PX4Pilot::droneStateCallback(
   drone_state.q_roll = r;
 
   disturbances.clear();
-  disturbances.push_back(0.0);
-  disturbances.push_back(0.0);
-  disturbances.push_back(0.0);
-  // disturbances.push_back(msg.disturbances.x);
-  // disturbances.push_back(msg.disturbances.y);
-  // disturbances.push_back(msg.disturbances.z);
+  // disturbances.push_back(0.0);
+  // disturbances.push_back(0.0);
+  // disturbances.push_back(0.0);
+  disturbances.push_back(msg.disturbances.x);
+  disturbances.push_back(msg.disturbances.y);
+  disturbances.push_back(msg.disturbances.z);
 
   has_drone_state = !has_drone_state ? true : has_drone_state;
 }
@@ -384,7 +384,7 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           /** TODO: This doesn't work. The RC Callback set the controller flag
            * back to true */
           ROS_ERROR("NMPC failed to return command. Hovering");
-          controller_enabled = false;
+          // controller_enabled = false;
           vel_cmd.header.stamp = ros::Time::now();
           vel_control_pub.publish(vel_cmd);
         }
