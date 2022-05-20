@@ -4,26 +4,26 @@ P_v: [0.1, 0.1, 0.1]
 P_dq: [0.1, 0.1, 0.1]
 P_fd: [1.0, 1.0, 1.0]
 P_rb: [1.0, 1.0, 1.0]
-P_mp: [0.5, 0.5, 0.5]
+P_mp: [0.1, 0.1, 0.1]
 P_mdq: [0.1, 0.1, 0.1]
 
 # Process covariance
-Q_p: 0.1
+Q_p: 0.075
 Q_v: 0.1
-Q_dq: 0.1
+Q_dq: 0.01
 Q_fd: 0.1
 Q_rb: 0.1
-Q_mp: 0.001
-Q_mdq: 0.001
+Q_mp: 1.0e-6
+Q_mdq: 1.0e-6
 
 # Odometry covariance
-R_odom_p: [0.05, 0.05, 0.05]
-R_odom_v: [0.05, 0.05, 0.05]
-R_odom_q: [0.001, 0.001, 0.001, 0.001]
+R_odom_p: [0.004, 0.004, 0.004]
+R_odom_v: [0.04, 0.04, 0.04]
+R_odom_q: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3]
 
 # Marker covariance
-R_marker_p: [0.01, 0.01, 0.01]
-R_marker_q: [0.01, 0.01, 0.01, 0.01]
+R_marker_p: [1.0e-4, 1.0e-4, 1.0e-4]
+R_marker_q: [1.0e-3, 1.0e-3, 1.0e-3, 1.0e-3]
 
 # Chi critical values
 odom_chi_critical: 23.589
