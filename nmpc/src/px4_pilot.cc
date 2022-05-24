@@ -339,28 +339,34 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
       drone_connected = current_status.connected;
     }
 
-    if (got_RC && (ros::Time::now() - last_RC_time).toSec() > 0.5) {
-      got_RC = false;
-    }
+    // Chek if something went wrong while in offboard mode
+    if (is_offboard) {
+      if (got_RC && (ros::Time::now() - last_RC_time).toSec() > 0.5) {
+        got_RC = false;
+      }
 
-    if ((ros::Time::now() - last_state_time).toSec() > 0.5) {
-      ROS_WARN(
-          "Have not received the drone state for a while!!! Switching to "
-          "Position Control");
-      changeMode("POSCTL");
-      continue;
-    }
+      // Drone state lost
+      if (((ros::Time::now() - last_state_time).toSec() > 0.5)) {
+        ROS_WARN(
+            "Have not received the drone state for a while!!! Switching to "
+            "Position Control");
+        changeMode("POSCTL");
+        continue;
+      }
 
-    if (!drone_connected) {
-      ROS_WARN("Lost Connection to Vehicle!!! Switching to Position Control");
-      changeMode("POSCTL");
-      continue;
-    }
+      // Connection to drone lost
+      if (!drone_connected) {
+        ROS_WARN("Lost Connection to Vehicle!!! Switching to Position Control");
+        changeMode("POSCTL");
+        continue;
+      }
 
-    if (!got_RC) {
-      ROS_WARN("Lost RC!!! Switching to Position Control");
-      changeMode("POSCTL");
-      continue;
+      // RC lost
+      if (!got_RC) {
+        ROS_WARN("Lost RC!!! Switching to Position Control");
+        changeMode("POSCTL");
+        continue;
+      }
     }
 
     if (allow_offboard) {
