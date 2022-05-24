@@ -33,7 +33,7 @@ include_directories(
 )
 
 ## Runnables
-# Basic Observer
+# State Observer
 add_executable(state_observer_node
   src/state_observer_node.cc
   src/state_observer.cc
@@ -44,20 +44,6 @@ add_dependencies(state_observer_node
 )
 
 target_link_libraries(state_observer_node
-  ${catkin_LIBRARIES}
-)
-
-# Observer with marker
-add_executable(marker_observer_node
-  src/state_observer_w_marker_node.cc
-  src/state_observer_w_marker.cc
-)
-
-add_dependencies(marker_observer_node
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(marker_observer_node
   ${catkin_LIBRARIES}
 )
 

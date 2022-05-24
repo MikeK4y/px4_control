@@ -1,10 +1,16 @@
+#pragma once
+
 #include "state_estimation/sensors/base_sensor.h"
 
 namespace px4_ctrl {
-class MavrosGlocal : public BaseSensor {
+/**
+ * @brief Sensor class for odometry sensor. The measurement is the velocity in
+ * the body frame
+ */
+class OdometrySensor : public BaseSensor {
  public:
-  MavrosGlocal() {}
-  MavrosGlocal(Eigen::MatrixXd R_mat, const int &N) {
+  OdometrySensor() {}
+  OdometrySensor(Eigen::MatrixXd R_mat, const int &N) {
     R_mat_nom = R_mat;
     R_mat_cur = R_mat;
     res_size = N;
@@ -12,7 +18,7 @@ class MavrosGlocal : public BaseSensor {
     cyclic_index = 0;
     res_Mat = Eigen::MatrixXd::Zero(R_mat.rows(), N);
   }
-  ~MavrosGlocal() {}
+  ~OdometrySensor() {}
 
   /**
    * @brief Returns the H matrix and expected sensor measurement for the
@@ -30,7 +36,7 @@ class MavrosGlocal : public BaseSensor {
   Eigen::MatrixXd getCurrentR() const { return R_mat_cur; }
 
  private:
-  static const int measurement_size = 7;
+  static const int measurement_size = 3;
   static const int state_size = 23;
   static const int error_state_size = 21;
 
@@ -40,18 +46,22 @@ class MavrosGlocal : public BaseSensor {
    * @returns The H matrix at the provided state
    */
   Eigen::MatrixXd getHmat(const eskf_state &state) {
+    // Quaternion derivatives of R transpose
+    Eigen::Matrix3d R_w = dRdqw(state.attitude).transpose();
+    Eigen::Matrix3d R_x = dRdqx(state.attitude).transpose();
+    Eigen::Matrix3d R_y = dRdqy(state.attitude).transpose();
+    Eigen::Matrix3d R_z = dRdqz(state.attitude).transpose();
+
     // Construct H matrix
     Eigen::Matrix<double, measurement_size, state_size> H_mat;
     H_mat.setZero();
 
-    // Position
-    H_mat.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Random walk bias
-    H_mat.block(0, 13, 3, 3) = Eigen::Matrix3d::Identity();
-
-    // Attitude
-    H_mat.block(6, 6, 4, 4) = Eigen::Matrix4d::Identity();
+    // Velocity
+    H_mat.block(0, 3, 3, 3) = state.attitude.toRotationMatrix().transpose();
+    H_mat.block(0, 6, 3, 1) = R_w * state.velocity;
+    H_mat.block(0, 7, 3, 1) = R_x * state.velocity;
+    H_mat.block(0, 8, 3, 1) = R_y * state.velocity;
+    H_mat.block(0, 9, 3, 1) = R_z * state.velocity;
 
     // Error state derivative of the state
     Eigen::MatrixXd Xddx = getXddx(state, state_size, error_state_size);
@@ -65,13 +75,11 @@ class MavrosGlocal : public BaseSensor {
    * @returns The expected measurement at the provided state
    */
   Eigen::MatrixXd getYExpected(const eskf_state &state) {
+    Eigen::Matrix3d R_mat = state.attitude.toRotationMatrix();
+
     Eigen::Matrix<double, measurement_size, 1> y_exp;
 
-    y_exp.segment(0, 3) = state.position + state.random_walk_bias;
-    y_exp(3) = state.attitude.w();
-    y_exp(4) = state.attitude.x();
-    y_exp(5) = state.attitude.y();
-    y_exp(6) = state.attitude.z();
+    y_exp = R_mat.transpose() * state.velocity;
 
     return y_exp;
   }
