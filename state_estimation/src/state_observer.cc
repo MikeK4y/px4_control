@@ -207,19 +207,13 @@ void StateObserver::poseCallback(const nav_msgs::Odometry &msg) {
         msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
     // Velocity
-    state.velocity(0) = 0.0;
-    state.velocity(1) = 0.0;
-    state.velocity(2) = 0.0;
+    state.velocity.setZero();
 
     // Disturbances
-    state.disturbances(0) = 0.0;
-    state.disturbances(1) = 0.0;
-    state.disturbances(2) = 0.0;
+    state.disturbances.setZero();
 
     // Biases
-    state.random_walk_bias(0) = 0.0;
-    state.random_walk_bias(1) = 0.0;
-    state.random_walk_bias(2) = 0.0;
+    state.random_walk_bias.setZero();
 
     last_drone_q = state.attitude;
 
@@ -244,9 +238,7 @@ void StateObserver::poseCallback(const nav_msgs::Odometry &msg) {
           msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
       // Velocity
-      state.velocity(0) = 0.0;
-      state.velocity(1) = 0.0;
-      state.velocity(2) = 0.0;
+      state.velocity.setZero();
 
       last_drone_q = state.attitude;
 
@@ -490,7 +482,7 @@ void StateObserver::predict(ros::Time pred_time) {
       state_pred.velocity =
           state.velocity + dt * damping_matrix * state.velocity;
       state_pred.attitude = state.attitude;
-      state_pred.disturbances = state.disturbances;
+      state_pred.disturbances.setZero();
       state_pred.random_walk_bias = state.random_walk_bias;
       state_pred.marker_position = state.marker_position;
       state_pred.marker_orientation = state.marker_orientation;
