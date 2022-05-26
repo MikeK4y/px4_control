@@ -14,11 +14,20 @@ k_thrust: 28.17243
 gravity: -9.8066
 
 # Cost function weights
-pos_w: [21, 21, 14]
-vel_w: [5, 5, 5]
+pos_w: [25, 25, 17]
+vel_w: [11, 11, 11]
 att_w: [1, 1, 1]
 
 yaw_rate_cmd_w: 100
-pitch_cmd_w: 150
-roll_cmd_w: 150
-thrust_cmd_w: 250
+pitch_cmd_w: 135
+roll_cmd_w: 135
+thrust_cmd_w: 750
+
+# RC
+auto_channel: 13
+auto_on: 2005
+auto_off: 982
+
+offboard_channel: 14
+offboard_on: 2005
+offboard_off: 982
