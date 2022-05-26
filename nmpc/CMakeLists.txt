@@ -62,21 +62,6 @@ target_link_libraries(acados_nmpc
   ${nmpc_generated_LIBRARIES}
 )
 
-# PX4 control node
-add_executable(px4_nmpc_node
-  src/px4_control_node.cc
-  src/px4_control.cc
-)
-
-add_dependencies(px4_nmpc_node
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(px4_nmpc_node
-  ${catkin_LIBRARIES}
-  acados_nmpc
-)
-
 # PX4 pilot node
 add_executable(px4_pilot_node
   src/px4_pilot_node.cc
@@ -88,20 +73,6 @@ add_dependencies(px4_pilot_node
 )
 
 target_link_libraries(px4_pilot_node
-  ${catkin_LIBRARIES}
-  acados_nmpc
-)
-
-# Master control
-add_executable(master_control_node
-  src/master_control.cc
-)
-
-add_dependencies(master_control_node
-  ${catkin_EXPORTED_TARGETS}
-)
-
-target_link_libraries(master_control_node
   ${catkin_LIBRARIES}
   acados_nmpc
 )
