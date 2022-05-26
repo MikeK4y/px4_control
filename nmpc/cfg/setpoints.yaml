@@ -1,5 +1,0 @@
-# Setpoints in world and marker frames
-# setpoint_world:[x, y, z, heading]
-setpoint_world: [0.25, -0.25, 0.5, 1.57]
-# setpoint_marker:[x, y, z]
-setpoint_marker: [0.0, 0.0, 1.0]

@@ -1,6 +1,0 @@
-<launch>
-  <node name="master_controller_node" pkg="nmpc" type="master_control_node" output="screen" required="true">
-    <rosparam command="load" file="$(find state_estimation)/cfg/iris_sitl_parameters.yaml"/>
-    <rosparam command="load" file="$(find nmpc)/cfg/setpoints.yaml"/>
-  </node>
-</launch>
