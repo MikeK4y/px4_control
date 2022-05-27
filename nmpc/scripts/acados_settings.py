@@ -83,10 +83,10 @@ def acados_settings(Tf, N, generate_code=False):
     # Input constraints
     yaw_rate_min = -0.05*np.pi
     yaw_rate_max = 0.05*np.pi
-    pitch_cmd_min = -0.075*np.pi
-    pitch_cmd_max = 0.075*np.pi
-    roll_cmd_min = -0.075*np.pi
-    roll_cmd_max = 0.075*np.pi
+    pitch_cmd_min = -0.055*np.pi
+    pitch_cmd_max = 0.055*np.pi
+    roll_cmd_min = -0.055*np.pi
+    roll_cmd_max = 0.055*np.pi
     thrust_min = 0.28
     thrust_max = 0.42
 
