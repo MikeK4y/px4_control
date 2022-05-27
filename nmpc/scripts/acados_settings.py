@@ -87,8 +87,8 @@ def acados_settings(Tf, N, generate_code=False):
     pitch_cmd_max = 0.055*np.pi
     roll_cmd_min = -0.055*np.pi
     roll_cmd_max = 0.055*np.pi
-    thrust_min = 0.28
-    thrust_max = 0.42
+    thrust_min = 0.22
+    thrust_max = 0.36
 
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])
     ocp.constraints.lbu = np.array(
