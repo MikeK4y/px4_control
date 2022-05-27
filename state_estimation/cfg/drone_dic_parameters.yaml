@@ -19,8 +19,8 @@ vel_w: [11, 11, 11]
 att_w: [1, 1, 1]
 
 yaw_rate_cmd_w: 100
-pitch_cmd_w: 135
-roll_cmd_w: 135
+pitch_cmd_w: 150
+roll_cmd_w: 150
 thrust_cmd_w: 750
 
 # RC
