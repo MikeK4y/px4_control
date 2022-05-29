@@ -53,9 +53,6 @@ class PoseSensor : public BaseSensor {
     // Position
     H_mat.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
 
-    // Random walk bias
-    H_mat.block(0, 13, 3, 3) = Eigen::Matrix3d::Identity();
-
     // Attitude
     H_mat.block(3, 6, 4, 4) = Eigen::Matrix4d::Identity();
 
@@ -73,7 +70,7 @@ class PoseSensor : public BaseSensor {
   Eigen::MatrixXd getYExpected(const eskf_state &state) {
     Eigen::Matrix<double, measurement_size, 1> y_exp;
 
-    y_exp.segment(0, 3) = state.position + state.random_walk_bias;
+    y_exp.segment(0, 3) = state.position;
     y_exp(3) = state.attitude.w();
     y_exp(4) = state.attitude.x();
     y_exp(5) = state.attitude.y();
