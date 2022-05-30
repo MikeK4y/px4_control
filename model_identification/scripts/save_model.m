@@ -21,15 +21,27 @@ fprintf(fileID, 'gravity: -9.8066\n');
 fprintf(fileID, '\n');
 
 fprintf(fileID, '# Cost function weights\n');
+fprintf(fileID, '# pos_w, vel_x -> [x, y, z]\n');
+fprintf(fileID, '# att_w -> [roll, pitch, yaw]\n');
 fprintf(fileID, 'pos_w: [20, 20, 20]\n');
 fprintf(fileID, 'vel_w: [5, 5, 5]\n');
 fprintf(fileID, 'att_w: [1, 1, 1]\n');
 fprintf(fileID, '\n');
 
-fprintf(fileID, 'yaw_rate_cmd_w: 10\n');
-fprintf(fileID, 'pitch_cmd_w: 150\n');
-fprintf(fileID, 'roll_cmd_w: 150\n');
-fprintf(fileID, 'thrust_cmd_w: 150\n');
+fprintf(fileID, 'yaw_rate_cmd_w: 100\n');
+fprintf(fileID, 'pitch_cmd_w: 250\n');
+fprintf(fileID, 'roll_cmd_w: 250\n');
+fprintf(fileID, 'thrust_cmd_w: 500\n');
+
+fprintf(fileID, '# RC Switches\n');
+fprintf(fileID, 'auto_channel: \n');
+fprintf(fileID, 'auto_on: \n');
+fprintf(fileID, 'auto_off: \n');
+fprintf(fileID, '\n');
+
+fprintf(fileID, 'offboard_channel: \n');
+fprintf(fileID, 'offboard_on: \n');
+fprintf(fileID, 'offboard_off: \n');
 
 fclose(fileID);
 end
