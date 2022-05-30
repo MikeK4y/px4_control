@@ -8,7 +8,7 @@ k_pitch: 0.96379
 damping_coef: [-0.10628, -0.10628, 0.00000]
 
 # Thrust coefficient
-k_thrust: 34.56196
+k_thrust: 32.56196
 
 # Gravity on world frame
 gravity: -9.8066

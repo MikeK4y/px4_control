@@ -266,7 +266,7 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
 #endif
 
   // Get first control input
-  if (status == ACADOS_SUCCESS || status == ACADOS_MAXITER) {
+  if (status == ACADOS_SUCCESS) {
     double u_0[DRONE_W_DISTURBANCES_NU];
     ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", &u_0);
     ctrl.clear();
@@ -274,11 +274,6 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
     ctrl.push_back(u_0[1]);
     ctrl.push_back(u_0[2]);
     ctrl.push_back(u_0[3]);
-
-    if (status == ACADOS_MAXITER) {
-      std::cout << "Reached max iteration but...\n";
-    }
-    return true;
   } else {
     std::cerr << "drone_w_disturbances_acados_solve() failed with status: "
               << status << "\n";
