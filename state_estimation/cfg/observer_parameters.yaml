@@ -8,16 +8,16 @@ P_mp: [0.1, 0.1, 0.1]
 P_mdq: [0.1, 0.1, 0.1]
 
 # Process covariance
-Q_p: 0.05
-Q_v: 0.1
+Q_p: 0.01
+Q_v: 0.01
 Q_dq: 0.01
-Q_fd: 0.1
-Q_rb: 0.1
+Q_fd: 0.01
+Q_rb: 0.01
 Q_mp: 1.0e-5
 Q_mdq: 1.0e-5
 
 # Pose covariance
-R_pose_p: [0.01, 0.01, 0.01]
+R_pose_p: [1.0e-2, 1.0e-2, 1.0e-2]
 R_pose_q: [1.0e-4, 1.0e-4, 1.0e-4, 1.0e-4]
 
 # Odometry covariance

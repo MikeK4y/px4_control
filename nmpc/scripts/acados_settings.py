@@ -83,12 +83,12 @@ def acados_settings(Tf, N, generate_code=False):
     # Input constraints
     yaw_rate_min = -0.05*np.pi
     yaw_rate_max = 0.05*np.pi
-    pitch_cmd_min = -0.055*np.pi
-    pitch_cmd_max = 0.055*np.pi
-    roll_cmd_min = -0.055*np.pi
-    roll_cmd_max = 0.055*np.pi
-    thrust_min = 0.22
-    thrust_max = 0.36
+    pitch_cmd_min = -0.03*np.pi
+    pitch_cmd_max = 0.03*np.pi
+    roll_cmd_min = -0.03*np.pi
+    roll_cmd_max = 0.03*np.pi
+    thrust_min = 0.24
+    thrust_max = 0.32
 
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])
     ocp.constraints.lbu = np.array(
@@ -137,7 +137,7 @@ def acados_settings(Tf, N, generate_code=False):
 
 
 if __name__ == "__main__":
-    T = 2  # sec
+    T = 3  # sec
     control_rate = 20  # Hz
     acados_settings(T, T*control_rate, generate_code=True)
     print("Acados NMPC generated")
