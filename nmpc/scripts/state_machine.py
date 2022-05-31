@@ -22,10 +22,10 @@ class StateMachineNode():
         rp.loginfo('NMPC is up')
 
         # Setpoint
-        self.H_marker_setpoint = np.array([[1.0, 0.0, 1.0, -0.5],
-                                           [0.0, 1.0, 0.0,  0.0],
-                                           [0.0, 0.0, 1.0,  1.5],
-                                           [0.0, 0.0, 0.0,  1.0]])
+        self.H_marker_setpoint = np.array([[1.0, 0.0, 1.0, 4.0],
+                                           [0.0, 1.0, 0.0, 0.0],
+                                           [0.0, 0.0, 1.0, 0.0],
+                                           [0.0, 0.0, 0.0, 1.0]])
         self.marker_setpoint_sent = False
         self.marker_position = None
         self.marker_orientation = None
