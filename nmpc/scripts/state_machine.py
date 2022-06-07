@@ -114,6 +114,7 @@ class StateMachineNode():
                 if np.dot(d_p, d_p) > 0.02 or abs(d_o) > 0.075:
                     rp.logwarn(
                         'The marker\'s position changed too much. Sending new setpoint')
+                    self.traj.trajectory.clear()
                     self.marker_setpoint_sent = False
 
     def trajPublisher(self,):
