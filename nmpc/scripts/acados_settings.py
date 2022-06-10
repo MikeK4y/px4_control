@@ -137,7 +137,7 @@ def acados_settings(Tf, N, generate_code=False):
 
 
 if __name__ == "__main__":
-    T = 2  # sec
+    T = 3  # sec
     control_rate = 20  # Hz
     acados_settings(T, T*control_rate, generate_code=True)
     print("Acados NMPC generated")

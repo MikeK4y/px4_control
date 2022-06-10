@@ -4,7 +4,7 @@
 
 namespace px4_ctrl {
 AcadosNMPC::AcadosNMPC() {
-#ifndef TRACK_TIME
+#ifdef TRACK_TIME
   total_ocp_time = 0.0;
   min_ocp_time = 1.0e9;
   max_ocp_time = 0.0;
@@ -13,7 +13,7 @@ AcadosNMPC::AcadosNMPC() {
 }
 
 AcadosNMPC::~AcadosNMPC() {
-#ifndef TRACK_TIME
+#ifdef TRACK_TIME
   std::cout << "Average ocp solving time: "
             << 1000 * (total_ocp_time / total_ocp_calls) << "ms\n";
   std::cout << "Maximum ocp solving time: " << 1000 * max_ocp_time << "ms\n";
@@ -177,7 +177,7 @@ bool AcadosNMPC::getTrajectory(std::vector<trajectory_setpoint> &trajectory,
   while (!reached_goal) {
     int status = drone_w_disturbances_acados_solve(acados_ocp_capsule);
 
-    if (status == ACADOS_SUCCESS || status == ACADOS_MAXITER) {
+    if (status == ACADOS_SUCCESS) {
       // Get state at each time step
       double u_i[DRONE_W_DISTURBANCES_NU];
       double x_i[DRONE_W_DISTURBANCES_NX];
@@ -256,7 +256,7 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
 
   int status = drone_w_disturbances_acados_solve(acados_ocp_capsule);
 
-#ifndef TRACK_TIME
+#ifdef TRACK_TIME
   double elapsed_time;
   ocp_nlp_get(nlp_config, nlp_solver, "time_tot", &elapsed_time);
   max_ocp_time = max_ocp_time > elapsed_time ? max_ocp_time : elapsed_time;
@@ -274,6 +274,8 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
     ctrl.push_back(u_0[1]);
     ctrl.push_back(u_0[2]);
     ctrl.push_back(u_0[3]);
+
+    return true;
   } else {
     std::cerr << "drone_w_disturbances_acados_solve() failed with status: "
               << status << "\n";
@@ -327,17 +329,6 @@ void AcadosNMPC::updateReference() {
 
 void AcadosNMPC::updateInitialConditions(
     const trajectory_setpoint &state_init) {
-  // int idxbx0[DRONE_W_DISTURBANCES_NBX0];
-  // idxbx0[0] = 0;
-  // idxbx0[1] = 1;
-  // idxbx0[2] = 2;
-  // idxbx0[3] = 3;
-  // idxbx0[4] = 4;
-  // idxbx0[5] = 5;
-  // idxbx0[6] = 6;
-  // idxbx0[7] = 7;
-  // idxbx0[8] = 8;
-
   double x_init[DRONE_W_DISTURBANCES_NBX0];
   x_init[0] = state_init.pos_x;
   x_init[1] = state_init.pos_y;
@@ -351,8 +342,6 @@ void AcadosNMPC::updateInitialConditions(
 
   // Set the initial conditions by setting the lower and upper bounds to the
   // initial state values
-  // ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "idxbx",
-  // idxbx0);
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", x_init);
   ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", x_init);
 

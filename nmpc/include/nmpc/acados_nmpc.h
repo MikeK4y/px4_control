@@ -112,7 +112,7 @@ class AcadosNMPC {
   size_t trajectory_length;
   u_int64_t trajectory_index;
 
-#ifndef TRACK_TIME
+#ifdef TRACK_TIME
   double total_ocp_time;
   double min_ocp_time;
   double max_ocp_time;
