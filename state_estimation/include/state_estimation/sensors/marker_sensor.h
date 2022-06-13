@@ -37,8 +37,8 @@ class MarkerSensor : public BaseSensor {
 
  private:
   static const int measurement_size = 7;
-  static const int state_size = 23;
-  static const int error_state_size = 21;
+  static const int state_size = 24;
+  static const int error_state_size = 22;
 
   /**
    * @brief Calculates the H matrix using the predicted state
@@ -71,13 +71,13 @@ class MarkerSensor : public BaseSensor {
     H_mat.block(3, 9, 4, 1) = -dpqdpz(state.marker_orientation);
 
     // Marker Position
-    H_mat.block(0, 16, 3, 3) = state.attitude.toRotationMatrix().transpose();
+    H_mat.block(0, 17, 3, 3) = state.attitude.toRotationMatrix().transpose();
 
     // Marker Orientation
-    H_mat.block(3, 19, 4, 1) = dpqdqw(state.attitude.inverse());
-    H_mat.block(3, 20, 4, 1) = dpqdqx(state.attitude.inverse());
-    H_mat.block(3, 21, 4, 1) = dpqdqy(state.attitude.inverse());
-    H_mat.block(3, 22, 4, 1) = dpqdqz(state.attitude.inverse());
+    H_mat.block(3, 20, 4, 1) = dpqdqw(state.attitude.inverse());
+    H_mat.block(3, 21, 4, 1) = dpqdqx(state.attitude.inverse());
+    H_mat.block(3, 22, 4, 1) = dpqdqy(state.attitude.inverse());
+    H_mat.block(3, 23, 4, 1) = dpqdqz(state.attitude.inverse());
 
     // Error state derivative of the state
     Eigen::MatrixXd Xddx = getXddx(state, state_size, error_state_size);

@@ -83,21 +83,25 @@ void StateObserver::loadParameters() {
   // Observer parameters
   // Error covariance
   std::vector<double> P_p, P_v, P_dq, P_fd, P_rb, P_mp, P_mdq;
+  double P_hb;
   nh_pvt.getParam("P_p", P_p);
   nh_pvt.getParam("P_v", P_v);
   nh_pvt.getParam("P_dq", P_dq);
   nh_pvt.getParam("P_fd", P_fd);
   nh_pvt.getParam("P_rb", P_rb);
+  nh_pvt.param("P_hb", P_hb, 1.0);
   nh_pvt.getParam("P_mp", P_mp);
   nh_pvt.getParam("P_mdq", P_mdq);
 
   // Process covariance
-  double Q_p, Q_v, Q_dq, Q_fd, Q_rb, Q_mp, Q_mdq;
+  std::vector<double> Q_dq;
+  double Q_p, Q_v, Q_fd, Q_rb, Q_hb, Q_mp, Q_mdq;
   nh_pvt.param("Q_p", Q_p, 0.1);
   nh_pvt.param("Q_v", Q_v, 0.1);
-  nh_pvt.param("Q_dq", Q_dq, 0.1);
+  nh_pvt.getParam("Q_dq", Q_dq);
   nh_pvt.param("Q_fd", Q_fd, 0.1);
   nh_pvt.param("Q_rb", Q_rb, 0.1);
+  nh_pvt.param("Q_hb", Q_hb, 0.1);
   nh_pvt.param("Q_mp", Q_mp, 0.001);
   nh_pvt.param("Q_mdq", Q_mdq, 0.001);
 
@@ -130,19 +134,22 @@ void StateObserver::loadParameters() {
       Eigen::Vector3d(P_fd[0], P_fd[1], P_fd[2]);
   P_mat.block(12, 12, 3, 3).diagonal() =
       Eigen::Vector3d(P_rb[0], P_rb[1], P_rb[2]);
-  P_mat.block(15, 15, 3, 3).diagonal() =
+  P_mat(15, 15) = P_hb;
+  P_mat.block(16, 16, 3, 3).diagonal() =
       Eigen::Vector3d(P_mp[0], P_mp[1], P_mp[2]);
-  P_mat.block(18, 18, 3, 3).diagonal() =
+  P_mat.block(19, 19, 3, 3).diagonal() =
       Eigen::Vector3d(P_mdq[0], P_mdq[1], P_mdq[2]);
 
   Q_mat.setZero();
   Q_mat.block(0, 0, 3, 3) = Q_p * Eigen::Matrix3d::Identity();
   Q_mat.block(3, 3, 3, 3) = Q_v * Eigen::Matrix3d::Identity();
-  Q_mat.block(6, 6, 3, 3) = Q_dq * Eigen::Matrix3d::Identity();
+  Q_mat.block(6, 6, 3, 3).diagonal() =
+      Eigen::Vector3d(Q_dq[0], Q_dq[1], Q_dq[2]);
   Q_mat.block(9, 9, 3, 3) = Q_fd * Eigen::Matrix3d::Identity();
   Q_mat.block(12, 12, 3, 3) = Q_rb * Eigen::Matrix3d::Identity();
-  Q_mat.block(15, 15, 3, 3) = Q_mp * Eigen::Matrix3d::Identity();
-  Q_mat.block(18, 18, 3, 3) = Q_mdq * Eigen::Matrix3d::Identity();
+  Q_mat(15, 15) = Q_hb;
+  Q_mat.block(16, 16, 3, 3) = Q_mp * Eigen::Matrix3d::Identity();
+  Q_mat.block(19, 19, 3, 3) = Q_mdq * Eigen::Matrix3d::Identity();
 
   R_odom.setZero();
   R_odom.block(0, 0, 3, 3).diagonal() =
@@ -484,6 +491,7 @@ void StateObserver::predict(ros::Time pred_time) {
       state_pred.attitude = state.attitude;
       state_pred.disturbances.setZero();
       state_pred.random_walk_bias = state.random_walk_bias;
+      state_pred.heading_offset = state.heading_offset;
       state_pred.marker_position = state.marker_position;
       state_pred.marker_orientation = state.marker_orientation;
 
@@ -506,14 +514,14 @@ void StateObserver::predict(ros::Time pred_time) {
       // Disturbances
       F_mat.block(9, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
-      // Random walk bias
-      F_mat.block(12, 12, 3, 3) = Eigen::Matrix3d::Identity();
+      // Biases
+      F_mat.block(12, 12, 4, 4) = Eigen::Matrix4d::Identity();
 
       // Marker position
-      F_mat.block(15, 15, 3, 3) = Eigen::Matrix3d::Identity();
+      F_mat.block(16, 16, 3, 3) = Eigen::Matrix3d::Identity();
 
       // Marker orientation
-      F_mat.block(18, 18, 3, 3) = Eigen::Matrix3d::Identity();
+      F_mat.block(19, 19, 3, 3) = Eigen::Matrix3d::Identity();
 
       // Update P_pred
       P_pred_mat = F_mat * P_mat * F_mat.transpose() + Q_mat;
@@ -586,6 +594,7 @@ eskf_state StateObserver::addUpdate(const eskf_state &state,
   updated_state.attitude.normalize();
   updated_state.disturbances = state.disturbances;
   updated_state.random_walk_bias = state.random_walk_bias;
+  updated_state.heading_offset = state.heading_offset;
   updated_state.marker_position = state.marker_position;
   updated_state.marker_orientation = state.marker_orientation;
 
@@ -628,14 +637,14 @@ void StateObserver::updatePpred(const double &dt, const Eigen::Vector4d &cmd) {
   // Disturbances
   F_mat.block(9, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
-  // Random walk bias
-  F_mat.block(12, 12, 3, 3) = Eigen::Matrix3d::Identity();
+  // Biases
+  F_mat.block(12, 12, 4, 4) = Eigen::Matrix4d::Identity();
 
   // Marker position
-  F_mat.block(15, 15, 3, 3) = Eigen::Matrix3d::Identity();
+  F_mat.block(16, 16, 3, 3) = Eigen::Matrix3d::Identity();
 
   // Marker orientation
-  F_mat.block(18, 18, 3, 3) = Eigen::Matrix3d::Identity();
+  F_mat.block(19, 19, 3, 3) = Eigen::Matrix3d::Identity();
 
   // Update P_pred
   P_pred_mat = F_mat * P_mat * F_mat.transpose() + Q_mat;
@@ -679,16 +688,17 @@ void StateObserver::correctState() {
   state.random_walk_bias(0) = state_pred.random_walk_bias(0) + error_state(12);
   state.random_walk_bias(1) = state_pred.random_walk_bias(1) + error_state(13);
   state.random_walk_bias(2) = state_pred.random_walk_bias(2) + error_state(14);
+  state.heading_offset = state_pred.heading_offset + error_state(15);
 
   if (marker_found) {
     // Marker position
-    state.marker_position(0) = state_pred.marker_position(0) + error_state(15);
-    state.marker_position(1) = state_pred.marker_position(1) + error_state(16);
-    state.marker_position(2) = state_pred.marker_position(2) + error_state(17);
+    state.marker_position(0) = state_pred.marker_position(0) + error_state(16);
+    state.marker_position(1) = state_pred.marker_position(1) + error_state(17);
+    state.marker_position(2) = state_pred.marker_position(2) + error_state(18);
 
     // Marker orientation
     Eigen::Vector3d thetas_marker;
-    thetas_marker << error_state(18), error_state(19), error_state(20);
+    thetas_marker << error_state(19), error_state(20), error_state(21);
     angle = thetas_marker.norm();
     if (angle > 0) {
       thetas_marker = thetas_marker / angle;

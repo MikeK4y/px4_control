@@ -11,6 +11,8 @@ struct eskf_state {
   Eigen::Quaterniond attitude;
   Eigen::Vector3d disturbances;
   Eigen::Vector3d random_walk_bias;
+  double heading_offset;
+
   Eigen::Vector3d marker_position;
   Eigen::Quaterniond marker_orientation;
 };
@@ -98,27 +100,27 @@ static inline Eigen::MatrixXd getXddx(const eskf_state state,
   Xddx.block(10, 9, 3, 3) = Eigen::Matrix3d::Identity();
 
   // Biases
-  Xddx.block(13, 12, 3, 3) = Eigen::Matrix3d::Identity();
+  Xddx.block(13, 12, 4, 4) = Eigen::Matrix4d::Identity();
 
   // Marker position
-  Xddx.block(16, 15, 3, 3) = Eigen::Matrix3d::Identity();
+  Xddx.block(17, 16, 3, 3) = Eigen::Matrix3d::Identity();
 
   // Marker Orientation
-  Xddx(19, 18) = -0.5 * state.marker_orientation.x();
-  Xddx(19, 19) = -0.5 * state.marker_orientation.y();
-  Xddx(19, 20) = -0.5 * state.marker_orientation.z();
+  Xddx(20, 19) = -0.5 * state.marker_orientation.x();
+  Xddx(20, 20) = -0.5 * state.marker_orientation.y();
+  Xddx(20, 21) = -0.5 * state.marker_orientation.z();
 
-  Xddx(20, 18) = 0.5 * state.marker_orientation.w();
-  Xddx(20, 19) = -0.5 * state.marker_orientation.z();
-  Xddx(20, 20) = 0.5 * state.marker_orientation.y();
-
-  Xddx(21, 18) = 0.5 * state.marker_orientation.z();
   Xddx(21, 19) = 0.5 * state.marker_orientation.w();
-  Xddx(21, 20) = -0.5 * state.marker_orientation.x();
+  Xddx(21, 20) = -0.5 * state.marker_orientation.z();
+  Xddx(21, 21) = 0.5 * state.marker_orientation.y();
 
-  Xddx(22, 18) = -0.5 * state.marker_orientation.y();
-  Xddx(22, 19) = 0.5 * state.marker_orientation.x();
+  Xddx(22, 19) = 0.5 * state.marker_orientation.z();
   Xddx(22, 20) = 0.5 * state.marker_orientation.w();
+  Xddx(22, 21) = -0.5 * state.marker_orientation.x();
+
+  Xddx(23, 19) = -0.5 * state.marker_orientation.y();
+  Xddx(23, 20) = 0.5 * state.marker_orientation.x();
+  Xddx(23, 21) = 0.5 * state.marker_orientation.w();
 
   return Xddx;
 }

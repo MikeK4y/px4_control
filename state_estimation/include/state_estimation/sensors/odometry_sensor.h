@@ -37,8 +37,8 @@ class OdometrySensor : public BaseSensor {
 
  private:
   static const int measurement_size = 3;
-  static const int state_size = 23;
-  static const int error_state_size = 21;
+  static const int state_size = 24;
+  static const int error_state_size = 22;
 
   /**
    * @brief Calculates the H matrix using the predicted state

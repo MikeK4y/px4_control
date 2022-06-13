@@ -37,8 +37,8 @@ class PoseSensor : public BaseSensor {
 
  private:
   static const int measurement_size = 7;
-  static const int state_size = 23;
-  static const int error_state_size = 21;
+  static const int state_size = 24;
+  static const int error_state_size = 22;
 
   /**
    * @brief Calculates the H matrix using the predicted state
@@ -57,7 +57,25 @@ class PoseSensor : public BaseSensor {
     H_mat.block(0, 13, 3, 3) = Eigen::Matrix3d::Identity();
 
     // Attitude
-    H_mat.block(3, 6, 4, 4) = Eigen::Matrix4d::Identity();
+    Eigen::Vector3d axes;
+    axes << 0.0, 0.0, 1.0;
+    Eigen::Quaterniond q_phi =
+        Eigen::Quaterniond(Eigen::AngleAxisd(state.heading_offset, axes));
+
+    H_mat.block(3, 6, 4, 1) = dpqdqw(q_phi);
+    H_mat.block(3, 7, 4, 1) = dpqdqx(q_phi);
+    H_mat.block(3, 8, 4, 1) = dpqdqy(q_phi);
+    H_mat.block(3, 9, 4, 1) = dpqdqz(q_phi);
+
+    // Heading offset
+    H_mat(3, 16) = -state.attitude.w() * sin(0.5 * state.heading_offset) -
+                   state.attitude.z() * cos(0.5 * state.heading_offset);
+    H_mat(4, 16) = -state.attitude.x() * sin(0.5 * state.heading_offset) -
+                   state.attitude.y() * cos(0.5 * state.heading_offset);
+    H_mat(5, 16) = -state.attitude.y() * sin(0.5 * state.heading_offset) +
+                   state.attitude.x() * cos(0.5 * state.heading_offset);
+    H_mat(6, 16) = -state.attitude.z() * sin(0.5 * state.heading_offset) +
+                   state.attitude.w() * cos(0.5 * state.heading_offset);
 
     // Error state derivative of the state
     Eigen::MatrixXd Xddx = getXddx(state, state_size, error_state_size);
@@ -73,11 +91,18 @@ class PoseSensor : public BaseSensor {
   Eigen::MatrixXd getYExpected(const eskf_state &state) {
     Eigen::Matrix<double, measurement_size, 1> y_exp;
 
+    Eigen::Vector3d axes;
+    axes << 0.0, 0.0, 1.0;
+    Eigen::Quaterniond q_phi =
+        Eigen::Quaterniond(Eigen::AngleAxisd(state.heading_offset, axes));
+
+    Eigen::Quaterniond q_meas = q_phi * state.attitude;
+
     y_exp.segment(0, 3) = state.position + state.random_walk_bias;
-    y_exp(3) = state.attitude.w();
-    y_exp(4) = state.attitude.x();
-    y_exp(5) = state.attitude.y();
-    y_exp(6) = state.attitude.z();
+    y_exp(3) = q_meas.w();
+    y_exp(4) = q_meas.x();
+    y_exp(5) = q_meas.y();
+    y_exp(6) = q_meas.z();
 
     return y_exp;
   }
