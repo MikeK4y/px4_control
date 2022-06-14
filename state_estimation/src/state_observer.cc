@@ -626,7 +626,8 @@ void StateObserver::updatePpred(const double &dt, const Eigen::Vector4d &cmd) {
   double pitch = asin(R_mat(2, 0));
   double roll = atan2(R_mat(2, 1), R_mat(2, 2));
 
-  double omega_z = cmd(0);
+  // double omega_z = cmd(0);
+  double omega_z = 0.0;
   double omega_y = (k_pitch * cmd(1) - pitch) / t_pitch;
   double omega_x = (k_roll * cmd(2) - roll) / t_roll;
 
@@ -738,10 +739,11 @@ void StateObserver::publishState(ros::Time time) {
   msg.disturbances.y = state.disturbances(1);
   msg.disturbances.z = state.disturbances(2);
 
-  // Disturbances
+  // Biases
   msg.random_walk_bias.x = state.random_walk_bias(0);
   msg.random_walk_bias.y = state.random_walk_bias(1);
   msg.random_walk_bias.z = state.random_walk_bias(2);
+  msg.heading_bias.data = state.heading_offset;
 
   // Marker
   msg.marker_found.data = marker_found;
