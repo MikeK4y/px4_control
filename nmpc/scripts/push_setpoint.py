@@ -13,7 +13,7 @@ trajectory_pub = rp.Publisher('/drone_trajectory', Trajectory, queue_size=1, lat
 setpoint_msg = Setpoint()
 setpoint_msg.position.x = 0.0
 setpoint_msg.position.y = 0.0
-setpoint_msg.position.z = 1.2
+setpoint_msg.position.z = 1.5
 setpoint_msg.velocity.x = 0.0
 setpoint_msg.velocity.y = 0.0
 setpoint_msg.velocity.z = 0.0
@@ -21,10 +21,11 @@ setpoint_msg.orientation.x = 0.0
 setpoint_msg.orientation.y = 0.0
 setpoint_msg.orientation.z = 0.0
 
-traj = []
-traj.append(setpoint_msg)
+traj = Trajectory()
+traj.header.stamp = rp.Time.now()
+traj.trajectory.append(setpoint_msg)
 
 # Publish setpoint
 trajectory_pub.publish(traj)
-rp.loginfo('Setpoint sent')
 time.sleep(1.0)
+rp.loginfo('Setpoint sent')
