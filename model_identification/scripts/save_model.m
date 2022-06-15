@@ -32,6 +32,7 @@ fprintf(fileID, 'yaw_rate_cmd_w: 100\n');
 fprintf(fileID, 'pitch_cmd_w: 250\n');
 fprintf(fileID, 'roll_cmd_w: 250\n');
 fprintf(fileID, 'thrust_cmd_w: 500\n');
+fprintf(fileID, '\n');
 
 fprintf(fileID, '# RC Switches\n');
 fprintf(fileID, 'auto_channel: \n');
