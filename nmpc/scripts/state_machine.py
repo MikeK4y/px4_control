@@ -25,7 +25,7 @@ class StateMachineNode():
         rp.loginfo('NMPC is up')
 
         # Setpoint
-        self.H_marker_setpoint = np.array([[1.0, 0.0, 1.0, -4.2],
+        self.H_marker_setpoint = np.array([[1.0, 0.0, 0.0, -4.2],
                                            [0.0, 1.0, 0.0,  0.0],
                                            [0.0, 0.0, 1.0,  0.2],
                                            [0.0, 0.0, 0.0,  1.0]])
