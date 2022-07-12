@@ -74,6 +74,14 @@ class AcadosNMPC {
                      const std::vector<double> &disturbances);
 
   /**
+   * @brief Returns the current setpoint
+   * @returns current trajectory setpoint
+   */
+  trajectory_setpoint getCurrentSetpoint() const {
+    return current_reference_trajectory[trajectory_index];
+  }
+
+  /**
    * @brief Sets the current UAS state
    * @param state Current UAS state
    * @param disturbances Current estimation of external disturbances. Expects a

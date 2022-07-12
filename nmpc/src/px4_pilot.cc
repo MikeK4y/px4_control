@@ -261,6 +261,18 @@ void PX4Pilot::loadParameters() {
   double roll_cmd_w = loadSingleParameter(nh_pvt, "roll_cmd_w", 100.0);
   double thrust_cmd_w = loadSingleParameter(nh_pvt, "thrust_cmd_w", 100.0);
 
+  std::vector<double> default_gains{0.0, 0.0};
+  std::vector<double> gains;
+  gains = loadVectorParameter(nh_pvt, "x_gain", default_gains);
+  x_kp = gains[0];
+  x_kv = gains[1];
+  gains = loadVectorParameter(nh_pvt, "y_gain", default_gains);
+  y_kp = gains[0];
+  y_kv = gains[1];
+  gains = loadVectorParameter(nh_pvt, "z_gain", default_gains);
+  z_kp = gains[0];
+  z_kv = gains[1];
+
   // Cost function weights
   weights.push_back(pos_w[0]);
   weights.push_back(pos_w[1]);
@@ -327,10 +339,6 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
                       vel_cmd.IGNORE_PZ | vel_cmd.IGNORE_AFX |
                       vel_cmd.IGNORE_AFY | vel_cmd.IGNORE_AFZ |
                       vel_cmd.IGNORE_YAW;
-  vel_cmd.velocity.x = 0.0;
-  vel_cmd.velocity.y = 0.0;
-  vel_cmd.velocity.z = 0.0;
-  vel_cmd.yaw_rate = 0.0;
 
   while (ros::ok()) {
     {  // Lock status mutex
@@ -396,15 +404,35 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           att_cmd.header.stamp = ros::Time::now();
           att_control_pub.publish(att_cmd);
         } else {
-          /** TODO: This doesn't work. The RC Callback set the controller flag
-           * back to true */
-          ROS_ERROR("NMPC failed to return command. Hovering");
-          // controller_enabled = false;
+          ROS_ERROR("NMPC failed. Using backup velocity controller");
+          trajectory_setpoint current_setpoint =
+              nmpc_controller->getCurrentSetpoint();
+
+          double syaw = sin(current_yaw);
+          double cyaw = cos(current_yaw);
+          double d_px = current_setpoint.pos_x - drone_state.pos_x;
+          double d_vx = current_setpoint.vel_x - drone_state.vel_x;
+          double d_py = current_setpoint.pos_y - drone_state.pos_y;
+          double d_vy = current_setpoint.vel_y - drone_state.vel_y;
+          double d_pz = current_setpoint.pos_z - drone_state.pos_z;
+          double d_vz = current_setpoint.vel_z - drone_state.vel_z;
+
+          vel_cmd.velocity.x = x_kp * (-cyaw * d_px + syaw * d_py) +
+                               x_kv * (-cyaw * d_vx + syaw * d_vy);
+          vel_cmd.velocity.y = y_kp * (-syaw * d_px - cyaw * d_py) +
+                               y_kv * (-syaw * d_vx - cyaw * d_vy);
+          vel_cmd.velocity.z = z_kp * d_pz + z_kv * d_vz;
+          vel_cmd.yaw_rate = 0.0;
+
           vel_cmd.header.stamp = ros::Time::now();
           vel_control_pub.publish(vel_cmd);
         }
       } else {
         // Send zero velocity commands so that it can be switched to Offboard
+        vel_cmd.velocity.x = 0.0;
+        vel_cmd.velocity.y = 0.0;
+        vel_cmd.velocity.z = 0.0;
+        vel_cmd.yaw_rate = 0.0;
         vel_cmd.header.stamp = ros::Time::now();
         vel_control_pub.publish(vel_cmd);
       }

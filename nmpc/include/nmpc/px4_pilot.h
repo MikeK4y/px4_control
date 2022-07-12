@@ -98,6 +98,11 @@ class PX4Pilot {
   bool trajectory_loaded;
   ros::Time last_state_time;
 
+  // Backup controller gains
+  double x_kp, x_kv;
+  double y_kp, y_kv;
+  double z_kp, z_kv;
+
   model_parameters model_params;
   trajectory_setpoint drone_state;
   std::vector<double> disturbances, weights;

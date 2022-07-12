@@ -20,7 +20,7 @@ fprintf(fileID, '# Gravity on world frame\n');
 fprintf(fileID, 'gravity: -9.8066\n');
 fprintf(fileID, '\n');
 
-fprintf(fileID, '# Cost function weights\n');
+fprintf(fileID, '# NMPC cost function weights\n');
 fprintf(fileID, '# pos_w, vel_x -> [x, y, z]\n');
 fprintf(fileID, '# att_w -> [roll, pitch, yaw]\n');
 fprintf(fileID, 'pos_w: [20, 20, 20]\n');
@@ -32,6 +32,13 @@ fprintf(fileID, 'yaw_rate_cmd_w: 100\n');
 fprintf(fileID, 'pitch_cmd_w: 250\n');
 fprintf(fileID, 'roll_cmd_w: 250\n');
 fprintf(fileID, 'thrust_cmd_w: 500\n');
+fprintf(fileID, '\n');
+
+fprintf(fileID, '# Backup velocity controller weights\n');
+fprintf(fileID, '# gain -> [position error gain, velocity error gain]\n');
+fprintf(fileID, 'x_gain: [0.0, 0.0]\n');
+fprintf(fileID, 'y_gain: [0.0, 0.0]\n');
+fprintf(fileID, 'z_gain: [0.0, 0.0]\n');
 fprintf(fileID, '\n');
 
 fprintf(fileID, '# RC Switches\n');
