@@ -417,10 +417,10 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           double d_pz = current_setpoint.pos_z - drone_state.pos_z;
           double d_vz = current_setpoint.vel_z - drone_state.vel_z;
 
-          vel_cmd.velocity.x = x_kp * (-cyaw * d_px + syaw * d_py) +
-                               x_kv * (-cyaw * d_vx + syaw * d_vy);
-          vel_cmd.velocity.y = y_kp * (-syaw * d_px - cyaw * d_py) +
-                               y_kv * (-syaw * d_vx - cyaw * d_vy);
+          vel_cmd.velocity.x = x_kp * (cyaw * d_px - syaw * d_py) +
+                               x_kv * (cyaw * d_vx - syaw * d_vy);
+          vel_cmd.velocity.y = y_kp * (syaw * d_px + cyaw * d_py) +
+                               y_kv * (syaw * d_vx + cyaw * d_vy);
           vel_cmd.velocity.z = z_kp * d_pz + z_kv * d_vz;
           vel_cmd.yaw_rate = 0.0;
 
