@@ -5,6 +5,7 @@
 
 // Acados NMPC
 #include "nmpc/acados_nmpc.h"
+#include "nmpc/pid.h"
 
 // ROS
 #include "ros/ros.h"
@@ -102,6 +103,8 @@ class PX4Pilot {
   double x_kp, x_kv;
   double y_kp, y_kv;
   double z_kp, z_kv;
+  PIDController *o_pid;
+  std::vector<double> o_pid_k;
 
   model_parameters model_params;
   trajectory_setpoint drone_state;

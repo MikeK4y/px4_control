@@ -74,6 +74,9 @@ PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
     exit(1);
   }
 
+  // Initialize orientation backup controller
+  o_pid = new PIDController(o_pid_k[0], o_pid_k[1], o_pid_k[2], 1);
+
   // Setup Subscribers
   mavros_status_sub =
       nh.subscribe("/mavros/state", 1, &PX4Pilot::mavrosStatusCallback, this);
@@ -272,6 +275,7 @@ void PX4Pilot::loadParameters() {
   gains = loadVectorParameter(nh_pvt, "z_gain", default_gains);
   z_kp = gains[0];
   z_kv = gains[1];
+  o_pid_k = loadVectorParameter(nh_pvt, "o_pid", vector_parameter);
 
   // Cost function weights
   weights.push_back(pos_w[0]);
@@ -381,6 +385,7 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
       if (controller_enabled && has_drone_state && is_offboard) {
         // Update current state
         double current_yaw;
+        double error_time = ros::Time::now().toSec();
         {  // Lock state mutex
           std::lock_guard<std::mutex> state_guard(*(drone_state_mutex));
           current_yaw = drone_state.q_yaw;
@@ -404,7 +409,7 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           att_cmd.header.stamp = ros::Time::now();
           att_control_pub.publish(att_cmd);
         } else {
-          ROS_ERROR("NMPC failed. Using backup velocity controller");
+          ROS_ERROR("NMPC failed. Using backup controller");
           trajectory_setpoint current_setpoint =
               nmpc_controller->getCurrentSetpoint();
 
@@ -422,7 +427,8 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           vel_cmd.velocity.y = y_kp * (syaw * d_px + cyaw * d_py) +
                                y_kv * (syaw * d_vx + cyaw * d_vy);
           vel_cmd.velocity.z = z_kp * d_pz + z_kv * d_vz;
-          vel_cmd.yaw_rate = 0.0;
+          vel_cmd.yaw_rate = o_pid->getControl(
+              current_setpoint.q_yaw - current_yaw, error_time);
 
           vel_cmd.header.stamp = ros::Time::now();
           vel_control_pub.publish(vel_cmd);

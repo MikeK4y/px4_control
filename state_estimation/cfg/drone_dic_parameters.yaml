@@ -27,9 +27,11 @@ thrust_cmd_w: 750
 
 # Backup velocity controller weights
 # gain -> [position error gain, velocity error gain]
-x_gain: [0.0, 0.0]
-y_gain: [0.0, 0.0]
-z_gain: [0.0, 0.0]
+# PID -> [kP, kI, kD]
+x_gain: [0.95, 0.65]
+y_gain: [0.95, 0.65]
+z_gain: [0.6, 0.45]
+o_PID: [0.3, 0.0, 0.4]
 
 # RC Switches
 auto_channel: 13
