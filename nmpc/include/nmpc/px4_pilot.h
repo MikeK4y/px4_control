@@ -11,6 +11,7 @@
 #include "ros/ros.h"
 
 // ROS messages
+#include <sensor_msgs/Joy.h>
 #include <mavros_msgs/RCIn.h>
 #include <mavros_msgs/State.h>
 #include <std_srvs/SetBool.h>
@@ -37,7 +38,7 @@ class PX4Pilot {
  private:
   // ROS Subscribers
   ros::Subscriber mavros_status_sub;
-  ros::Subscriber mavros_rc_sub;
+  ros::Subscriber fake_rc_sub;
   ros::Subscriber drone_state_sub;
   ros::Subscriber trajectory_sub;
 
@@ -54,7 +55,7 @@ class PX4Pilot {
 
   // Subscriber Callbacks
   void mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg);
-  void mavrosRCCallback(const mavros_msgs::RCIn::ConstPtr &msg);
+  void fakeRCCallback(const sensor_msgs::Joy::ConstPtr &msg);
   void droneStateCallback(const px4_control_msgs::DroneStateMarker &msg);
   void trajectoryCallback(const px4_control_msgs::Trajectory &msg);
 
@@ -86,8 +87,6 @@ class PX4Pilot {
   bool is_offboard;
 
   // PX4 RC
-  bool got_RC;
-  ros::Time last_RC_time;
   rc_switch controller_switch;
   rc_switch offboard_switch;
 

@@ -45,7 +45,6 @@ inline std::vector<double> loadVectorParameter(
 
 PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
   // Initialize variables
-  got_RC = false;
   drone_connected = false;
   allow_offboard = false;
   is_offboard = false;
@@ -80,8 +79,8 @@ PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
   // Setup Subscribers
   mavros_status_sub =
       nh.subscribe("/mavros/state", 1, &PX4Pilot::mavrosStatusCallback, this);
-  mavros_rc_sub =
-      nh.subscribe("/mavros/rc/in", 1, &PX4Pilot::mavrosRCCallback, this);
+  fake_rc_sub =
+      nh.subscribe("/joy", 1, &PX4Pilot::fakeRCCallback, this);
   drone_state_sub =
       nh.subscribe("/drone_state", 1, &PX4Pilot::droneStateCallback, this);
   trajectory_sub =
@@ -113,20 +112,14 @@ void PX4Pilot::mavrosStatusCallback(const mavros_msgs::State::ConstPtr &msg) {
   current_status = *msg;
 }
 
-void PX4Pilot::mavrosRCCallback(const mavros_msgs::RCIn::ConstPtr &msg) {
-  if (!got_RC) {
-    got_RC = true;
-  }
-
-  last_RC_time = msg->header.stamp;
-
+void PX4Pilot::fakeRCCallback(const sensor_msgs::Joy::ConstPtr &msg) {
   // Enable-Disable Controller
-  if (msg->channels[controller_switch.channel] == controller_switch.on_value &&
+  if (msg->buttons[controller_switch.channel] == controller_switch.on_value &&
       !controller_enabled && trajectory_loaded) {
     // Enable controller
     ROS_INFO("Enabling controller");
     controller_enabled = true;
-  } else if (msg->channels[controller_switch.channel] ==
+  } else if (msg->buttons[controller_switch.channel] ==
                  controller_switch.off_value &&
              controller_enabled) {
     // Disable controller
@@ -135,18 +128,18 @@ void PX4Pilot::mavrosRCCallback(const mavros_msgs::RCIn::ConstPtr &msg) {
   }
 
   // Allow switching to Offboard
-  if (msg->channels[offboard_switch.channel] == offboard_switch.on_value &&
+  if (msg->buttons[offboard_switch.channel] == offboard_switch.on_value &&
       !allow_offboard) {
     // Allow sending cmds
     ROS_INFO("Allowing switch to OFFBOARD");
     allow_offboard = true;
-  } else if (msg->channels[offboard_switch.channel] ==
+  } else if (msg->buttons[offboard_switch.channel] ==
                  offboard_switch.off_value &&
              allow_offboard) {
     // Block all offboard cmds
     ROS_INFO("Blocking all commands");
     allow_offboard = false;
-  } else if (msg->channels[offboard_switch.channel] ==
+  } else if (msg->buttons[offboard_switch.channel] ==
                  offboard_switch.on_value &&
              allow_offboard && !is_offboard) {
     changeMode("OFFBOARD");
@@ -353,10 +346,6 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
 
     // Chek if something went wrong while in offboard mode
     if (is_offboard) {
-      if (got_RC && (ros::Time::now() - last_RC_time).toSec() > 0.5) {
-        got_RC = false;
-      }
-
       // Drone state lost
       if (((ros::Time::now() - last_state_time).toSec() > 0.5)) {
         ROS_WARN(
@@ -369,13 +358,6 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
       // Connection to drone lost
       if (!drone_connected) {
         ROS_WARN("Lost Connection to Vehicle!!! Switching to Position Control");
-        changeMode("POSCTL");
-        continue;
-      }
-
-      // RC lost
-      if (!got_RC) {
-        ROS_WARN("Lost RC!!! Switching to Position Control");
         changeMode("POSCTL");
         continue;
       }

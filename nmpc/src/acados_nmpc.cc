@@ -90,7 +90,7 @@ bool AcadosNMPC::setWeighingMatrix(const std::vector<double> &weights) {
     for (int i = 0; i < DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY; i++)
       W[i] = 0.0;
 
-    for (int i = 0; i < DRONE_W_DISTURBANCES_NY * DRONE_W_DISTURBANCES_NY; i++)
+    for (int i = 0; i < DRONE_W_DISTURBANCES_NY; i++)
       W[i * (DRONE_W_DISTURBANCES_NY + 1)] = weights[i];
 
     for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++)
