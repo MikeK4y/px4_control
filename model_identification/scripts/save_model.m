@@ -34,11 +34,18 @@ fprintf(fileID, 'roll_cmd_w: 250\n');
 fprintf(fileID, 'thrust_cmd_w: 500\n');
 fprintf(fileID, '\n');
 
+fprintf(fileID, '# NMPC input constraints\n')
+fprintf(fileID, '# bound -> [yaw_cmd, pitch_cmd, roll_cmd, thrust]\n')
+fprintf(fileID, 'lbu: [-0.5, -0.2, -0.2, 0.1]\n')
+fprintf(fileID, 'ubu: [ 0.5,  0.2,  0.2, 1.0]\n')
+
 fprintf(fileID, '# Backup velocity controller weights\n');
 fprintf(fileID, '# gain -> [position error gain, velocity error gain]\n');
+fprintf(fileID, '# PID -> [kP, kI, kD]\n');
 fprintf(fileID, 'x_gain: [0.0, 0.0]\n');
 fprintf(fileID, 'y_gain: [0.0, 0.0]\n');
 fprintf(fileID, 'z_gain: [0.0, 0.0]\n');
+fprintf(fileID, 'o_pid: [0.0, 0.0, 0.0]\n');
 fprintf(fileID, '\n');
 
 fprintf(fileID, '# RC Switches\n');
