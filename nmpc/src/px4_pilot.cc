@@ -65,7 +65,8 @@ PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
 
   // Initialize acados NMPC
   nmpc_controller = new AcadosNMPC();
-  if (nmpc_controller->initializeController(model_params) &&
+  if (nmpc_controller->initializeController(model_params, input_lower_bound,
+                                            input_upper_bound) &&
       nmpc_controller->setWeighingMatrix(weights)) {
     ROS_INFO("NMPC Initialized\n");
   } else {
@@ -79,8 +80,7 @@ PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
   // Setup Subscribers
   mavros_status_sub =
       nh.subscribe("/mavros/state", 1, &PX4Pilot::mavrosStatusCallback, this);
-  fake_rc_sub =
-      nh.subscribe("/joy", 1, &PX4Pilot::fakeRCCallback, this);
+  fake_rc_sub = nh.subscribe("/joy", 1, &PX4Pilot::fakeRCCallback, this);
   drone_state_sub =
       nh.subscribe("/drone_state", 1, &PX4Pilot::droneStateCallback, this);
   trajectory_sub =
@@ -166,9 +166,6 @@ void PX4Pilot::droneStateCallback(
   drone_state.q_roll = r;
 
   disturbances.clear();
-  // disturbances.push_back(0.0);
-  // disturbances.push_back(0.0);
-  // disturbances.push_back(0.0);
   disturbances.push_back(msg.disturbances.x);
   disturbances.push_back(msg.disturbances.y);
   disturbances.push_back(msg.disturbances.z);
@@ -196,9 +193,12 @@ void PX4Pilot::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
     current_reference_trajectory.push_back(setpoint);
   }
   // Stop controller while loading the new trajectory
-  controller_enabled = false;
-  nmpc_controller->setTrajectory(current_reference_trajectory);
-  controller_enabled = true;
+  if (controller_enabled) {
+    controller_enabled = false;
+    nmpc_controller->setTrajectory(current_reference_trajectory);
+    controller_enabled = true;
+  } else
+    nmpc_controller->setTrajectory(current_reference_trajectory);
 
   ROS_INFO("Trajectory loaded");
   trajectory_loaded = true;
@@ -269,6 +269,10 @@ void PX4Pilot::loadParameters() {
   z_kp = gains[0];
   z_kv = gains[1];
   o_pid_k = loadVectorParameter(nh_pvt, "o_pid", vector_parameter);
+
+  // Controller input constraints
+  input_lower_bound = loadVectorParameter(nh_pvt, "lbu", default_gains);
+  input_upper_bound = loadVectorParameter(nh_pvt, "ubu", default_gains);
 
   // Cost function weights
   weights.push_back(pos_w[0]);

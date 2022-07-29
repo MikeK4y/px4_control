@@ -33,7 +33,10 @@ AcadosNMPC::~AcadosNMPC() {
   }
 }
 
-bool AcadosNMPC::initializeController(const model_parameters &model_params) {
+bool AcadosNMPC::initializeController(
+    const model_parameters &model_params,
+    const std::vector<double> &input_lower_bound,
+    const std::vector<double> &input_upper_bound) {
   // Initiallize Acados solver with default shooting intervals
   acados_ocp_capsule = drone_w_disturbances_acados_create_capsule();
   int status = drone_w_disturbances_acados_create(acados_ocp_capsule);
@@ -80,6 +83,25 @@ bool AcadosNMPC::initializeController(const model_parameters &model_params) {
     drone_w_disturbances_acados_update_params(acados_ocp_capsule, i,
                                               acados_model_parameters,
                                               DRONE_W_DISTURBANCES_NP);
+
+  // Set input constraints
+  double lbu[DRONE_W_DISTURBANCES_NU];
+  double ubu[DRONE_W_DISTURBANCES_NU];
+
+  for (int i = 0; i < DRONE_W_DISTURBANCES_NU; i++) {
+    lbu[i] = input_lower_bound[i];
+    ubu[i] = input_upper_bound[i];
+  }
+
+  for (int i = 0; i < DRONE_W_DISTURBANCES_N; i++) {
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "lbu", lbu);
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, i, "ubu", ubu);
+  }
+
+  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in,
+                                DRONE_W_DISTURBANCES_N, "lbu", lbu);
+  ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in,
+                                DRONE_W_DISTURBANCES_N, "ubu", ubu);
 
   return true;
 }

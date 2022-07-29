@@ -77,20 +77,9 @@ def acados_settings(Tf, N, generate_code=False):
         [roll_max, pitch_max, yaw_max])
 
     # Input constraints
-    yaw_rate_min = -0.05*np.pi
-    yaw_rate_max = 0.05*np.pi
-    pitch_cmd_min = -0.03*np.pi
-    pitch_cmd_max = 0.03*np.pi
-    roll_cmd_min = -0.03*np.pi
-    roll_cmd_max = 0.03*np.pi
-    thrust_min = 0.24
-    thrust_max = 0.32
-
     ocp.constraints.idxbu = np.array([0, 1, 2, 3])
-    ocp.constraints.lbu = np.array(
-        [yaw_rate_min, pitch_cmd_min, roll_cmd_min, thrust_min])
-    ocp.constraints.ubu = np.array(
-        [yaw_rate_max, pitch_cmd_max, roll_cmd_max, thrust_max])
+    ocp.constraints.lbu = np.zeros(nu)
+    ocp.constraints.ubu = np.zeros(nu)
 
     # Initial state
     ocp.constraints.x0 = np.zeros(nx)
@@ -108,7 +97,6 @@ def acados_settings(Tf, N, generate_code=False):
     ocp.solver_options.nlp_solver_type = 'SQP'
     ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
     ocp.solver_options.integrator_type = 'ERK'
-    # ocp.solver_options.nlp_solver_max_iter = 1000
 
     # Path to acados include and lib directories
     # Uncomment if you want to build generated c code

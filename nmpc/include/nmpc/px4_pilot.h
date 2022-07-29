@@ -11,9 +11,9 @@
 #include "ros/ros.h"
 
 // ROS messages
-#include <sensor_msgs/Joy.h>
 #include <mavros_msgs/RCIn.h>
 #include <mavros_msgs/State.h>
+#include <sensor_msgs/Joy.h>
 #include <std_srvs/SetBool.h>
 
 #include "px4_control_msgs/DroneStateMarker.h"
@@ -108,6 +108,7 @@ class PX4Pilot {
   model_parameters model_params;
   trajectory_setpoint drone_state;
   std::vector<double> disturbances, weights;
+  std::vector<double> input_lower_bound, input_upper_bound;
   std::vector<trajectory_setpoint> current_reference_trajectory;
 
   // Mutexes
