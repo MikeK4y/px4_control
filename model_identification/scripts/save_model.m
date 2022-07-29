@@ -34,10 +34,11 @@ fprintf(fileID, 'roll_cmd_w: 250\n');
 fprintf(fileID, 'thrust_cmd_w: 500\n');
 fprintf(fileID, '\n');
 
-fprintf(fileID, '# NMPC input constraints\n')
-fprintf(fileID, '# bound -> [yaw_cmd, pitch_cmd, roll_cmd, thrust]\n')
-fprintf(fileID, 'lbu: [-0.5, -0.2, -0.2, 0.1]\n')
-fprintf(fileID, 'ubu: [ 0.5,  0.2,  0.2, 1.0]\n')
+fprintf(fileID, '# NMPC input constraints\n');
+fprintf(fileID, '# bound -> [yaw_cmd, pitch_cmd, roll_cmd, thrust]\n');
+fprintf(fileID, 'lbu: [-0.5, -0.2, -0.2, 0.1]\n');
+fprintf(fileID, 'ubu: [ 0.5,  0.2,  0.2, 1.0]\n');
+fprintf(fileID, '\n');
 
 fprintf(fileID, '# Backup velocity controller weights\n');
 fprintf(fileID, '# gain -> [position error gain, velocity error gain]\n');
