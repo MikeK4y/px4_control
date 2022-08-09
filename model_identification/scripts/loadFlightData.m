@@ -47,6 +47,10 @@ odom_data.ydot = cellfun(@(m) double(m.Twist.Twist.Linear.Y), bag_struct);
 odom_data.zdot = cellfun(@(m) double(m.Twist.Twist.Linear.Z), bag_struct);
 
 %% Process Data
+start_t = cmd_data.time(1);
+cmd_data = cleanTable(cmd_data, start_t);
+odom_data = cleanTable(odom_data, start_t);
+
 % Get Euler Angles from Quaternion
 % Get velocities on world frame
 for i = 1 : length(odom_data.time)
@@ -58,7 +62,7 @@ for i = 1 : length(odom_data.time)
     odom_data.xdot_W(i) = pdot_W(2);
     odom_data.ydot_W(i) = pdot_W(3);
     odom_data.zdot_W(i) = pdot_W(4);
-
+    
     ypr = quat2eul(q);
     odom_data.yaw(i) = ypr(1);
     odom_data.pitch(i) = ypr(2);
@@ -97,4 +101,27 @@ if save_to_csv
     writetable(modelID_data, data_filename);
 end
 
+end
+
+%% Cleans table from dublicate values and sorts by time
+function clean_table = cleanTable(dirty_table, start_t)
+
+% Offset time and round values so that insignificant differences disappear
+dirty_table.time = round(dirty_table.time - start_t, 4);
+
+% Sort input by time
+dirty_table = sortrows(dirty_table, {'time'});
+
+% Find unique entries
+[~, i_unique, ~] = unique(dirty_table.time, 'rows');
+
+% Clean all variables
+dirty_values = dirty_table.Variables;
+clean_values = zeros([length(i_unique), size(dirty_values, 2)]);
+
+for i = 1 : size(dirty_values, 2)
+    clean_values(:, i) = dirty_values(i_unique, i);
+end
+
+clean_table = array2table(clean_values, 'VariableNames', dirty_table.Properties.VariableNames);
 end
