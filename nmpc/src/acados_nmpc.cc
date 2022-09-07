@@ -31,6 +31,8 @@ AcadosNMPC::~AcadosNMPC() {
     std::cerr << "drone_w_disturbances_acados_free_capsule() returned status: "
               << status << "\n";
   }
+
+  delete acados_model_parameters;
 }
 
 bool AcadosNMPC::initializeController(

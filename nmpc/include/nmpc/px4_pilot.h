@@ -30,7 +30,10 @@ struct rc_switch {
 class PX4Pilot {
  public:
   PX4Pilot(ros::NodeHandle &nh, const double &rate);
-  ~PX4Pilot() { delete nmpc_controller; }
+  ~PX4Pilot() {
+    delete nmpc_controller;
+    delete o_pid;
+  }
 
   std::thread cmd_publisher_worker_t;
 
