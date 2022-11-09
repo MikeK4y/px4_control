@@ -53,8 +53,10 @@ PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
   has_drone_state = false;
   trajectory_loaded = false;
 
+  // Reserve memory for vectors
+  weights.reserve(nmpc_controller->getWeightsSize());
+  disturbances.reserve(3);
   current_reference_trajectory.clear();
-  weights.clear();
 
   // Initialize mutexes
   status_mutex.reset(new std::mutex);
@@ -65,7 +67,7 @@ PX4Pilot::PX4Pilot(ros::NodeHandle &nh, const double &rate) {
   loadParameters();
 
   // Initialize acados NMPC
-  nmpc_controller = new AcadosNMPC();
+  nmpc_controller.reset(new AcadosNMPC());
   if (nmpc_controller->initializeController(model_params, input_lower_bound,
                                             input_upper_bound) &&
       nmpc_controller->setWeighingMatrix(weights)) {
@@ -174,9 +176,9 @@ void PX4Pilot::droneStateCallback(
   drone_state.q_roll = r;
 
   disturbances.clear();
-  disturbances.push_back(msg.disturbances.x);
-  disturbances.push_back(msg.disturbances.y);
-  disturbances.push_back(msg.disturbances.z);
+  disturbances.emplace_back(msg.disturbances.x);
+  disturbances.emplace_back(msg.disturbances.y);
+  disturbances.emplace_back(msg.disturbances.z);
 
   last_state_time = msg.header.stamp;
   has_drone_state = !has_drone_state ? true : has_drone_state;
@@ -198,7 +200,7 @@ void PX4Pilot::trajectoryCallback(const px4_control_msgs::Trajectory &msg) {
     setpoint.q_pitch = msg.trajectory[i].orientation.y;
     setpoint.q_yaw = msg.trajectory[i].orientation.z;
 
-    current_reference_trajectory.push_back(setpoint);
+    current_reference_trajectory.emplace_back(setpoint);
   }
   // Stop controller while loading the new trajectory
   if (controller_enabled) {
@@ -283,19 +285,20 @@ void PX4Pilot::loadParameters() {
   input_upper_bound = loadVectorParameter(nh_pvt, "ubu", default_gains);
 
   // Cost function weights
-  weights.push_back(pos_w[0]);
-  weights.push_back(pos_w[1]);
-  weights.push_back(pos_w[2]);
-  weights.push_back(vel_w[0]);
-  weights.push_back(vel_w[1]);
-  weights.push_back(vel_w[2]);
-  weights.push_back(att_w[0]);
-  weights.push_back(att_w[1]);
-  weights.push_back(att_w[2]);
-  weights.push_back(yaw_rate_cmd_w);
-  weights.push_back(pitch_cmd_w);
-  weights.push_back(roll_cmd_w);
-  weights.push_back(thrust_cmd_w);
+  weights.clear();
+  weights.emplace_back(pos_w[0]);
+  weights.emplace_back(pos_w[1]);
+  weights.emplace_back(pos_w[2]);
+  weights.emplace_back(vel_w[0]);
+  weights.emplace_back(vel_w[1]);
+  weights.emplace_back(vel_w[2]);
+  weights.emplace_back(att_w[0]);
+  weights.emplace_back(att_w[1]);
+  weights.emplace_back(att_w[2]);
+  weights.emplace_back(yaw_rate_cmd_w);
+  weights.emplace_back(pitch_cmd_w);
+  weights.emplace_back(roll_cmd_w);
+  weights.emplace_back(thrust_cmd_w);
 
   // RC
   // Controller switch
@@ -399,6 +402,7 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
 
         // Send controller commands
         std::vector<double> ctrl;
+        ctrl.reserve(4);
         if (nmpc_controller->getCommands(ctrl)) {
           tf2::Quaternion q;
           q.setRPY(ctrl[2], ctrl[1], current_yaw);

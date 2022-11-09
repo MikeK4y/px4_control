@@ -40,6 +40,11 @@ class AcadosNMPC {
   ~AcadosNMPC();
 
   /**
+   * @brief Returns size of weight vector
+   */
+  unsigned int getWeightsSize() const { return DRONE_W_DISTURBANCES_NY; }
+
+  /**
    * @brief Initializes controller and sets the model parameters
    * @param model_params The model parameters
    * @param input_lower_bound The command lower bound constraint
