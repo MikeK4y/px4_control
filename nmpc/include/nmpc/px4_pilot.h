@@ -31,7 +31,7 @@ struct rc_switch {
 class PX4Pilot {
  public:
   PX4Pilot(ros::NodeHandle &nh, const double &rate);
-  ~PX4Pilot() { delete nmpc_controller; }
+  ~PX4Pilot() { delete o_pid; }
 
   std::thread cmd_publisher_worker_t;
 
@@ -91,7 +91,7 @@ class PX4Pilot {
   rc_switch offboard_switch;
 
   // PX4 Controller
-  AcadosNMPC *nmpc_controller;
+  std::unique_ptr<AcadosNMPC> nmpc_controller;
   bool has_drone_state;
   bool controller_enabled;
   bool allow_offboard;

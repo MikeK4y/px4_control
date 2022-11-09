@@ -31,6 +31,8 @@ AcadosNMPC::~AcadosNMPC() {
     std::cerr << "drone_w_disturbances_acados_free_capsule() returned status: "
               << status << "\n";
   }
+
+  delete acados_model_parameters;
 }
 
 bool AcadosNMPC::initializeController(
@@ -256,10 +258,10 @@ bool AcadosNMPC::getCommands(std::vector<double> &ctrl) {
     double u_0[DRONE_W_DISTURBANCES_NU];
     ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "u", &u_0);
     ctrl.clear();
-    ctrl.push_back(u_0[0]);
-    ctrl.push_back(u_0[1]);
-    ctrl.push_back(u_0[2]);
-    ctrl.push_back(u_0[3]);
+    ctrl.emplace_back(u_0[0]);
+    ctrl.emplace_back(u_0[1]);
+    ctrl.emplace_back(u_0[2]);
+    ctrl.emplace_back(u_0[3]);
 
     // Update reference index
     trajectory_index = trajectory_index + 1 < trajectory_length
