@@ -254,7 +254,6 @@ void PX4Pilot::loadParameters() {
       loadVectorParameter(nh_pvt, "vel_w", vector_parameter);
   std::vector<double> att_w =
       loadVectorParameter(nh_pvt, "att_w", vector_parameter);
-  double yaw_rate_cmd_w = loadSingleParameter(nh_pvt, "yaw_rate_cmd_w", 100.0);
   double pitch_cmd_w = loadSingleParameter(nh_pvt, "pitch_cmd_w", 100.0);
   double roll_cmd_w = loadSingleParameter(nh_pvt, "roll_cmd_w", 100.0);
   double thrust_cmd_w = loadSingleParameter(nh_pvt, "thrust_cmd_w", 100.0);
@@ -287,10 +286,9 @@ void PX4Pilot::loadParameters() {
   weights.emplace_back(att_w[0]);
   weights.emplace_back(att_w[1]);
   weights.emplace_back(att_w[2]);
-  weights.emplace_back(yaw_rate_cmd_w);
-  weights.emplace_back(pitch_cmd_w);
-  weights.emplace_back(roll_cmd_w);
   weights.emplace_back(thrust_cmd_w);
+  weights.emplace_back(roll_cmd_w);
+  weights.emplace_back(pitch_cmd_w);
 
   // RC
   // Controller switch
@@ -372,13 +370,21 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
 
     if (allow_offboard) {
       if (controller_enabled && has_drone_state && is_offboard) {
+        // Update current reference
+        nmpc_controller->updateReference();
+        trajectory_setpoint current_setpoint =
+            nmpc_controller->getCurrentSetpoint();
+
         // Update current state
-        double current_yaw;
+        double current_yaw, yaw_rate;
         double error_time = ros::Time::now().toSec();
+
         {  // Lock state mutex
           std::lock_guard<std::mutex> state_guard(*(drone_state_mutex));
           current_yaw = drone_state.q_yaw;
-          nmpc_controller->setCurrentState(drone_state, disturbances);
+          yaw_rate = o_pid->getControl(current_setpoint.q_yaw - current_yaw,
+                                       error_time);
+          nmpc_controller->setCurrentState(drone_state, disturbances, yaw_rate);
         }
 
         // Send controller commands
@@ -386,22 +392,20 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
         ctrl.reserve(4);
         if (nmpc_controller->getCommands(ctrl)) {
           tf2::Quaternion q;
-          q.setRPY(ctrl[2], ctrl[1], current_yaw);
+          q.setRPY(ctrl[1], ctrl[2], current_yaw);
           q.normalize();
 
           att_cmd.orientation.x = q[0];
           att_cmd.orientation.y = q[1];
           att_cmd.orientation.z = q[2];
           att_cmd.orientation.w = q[3];
-          att_cmd.body_rate.z = ctrl[0];
-          att_cmd.thrust = ctrl[3] < 0.1 ? 0.1 : ctrl[3];
+          att_cmd.body_rate.z = yaw_rate;
+          att_cmd.thrust = ctrl[0] < 0.1 ? 0.1 : ctrl[0];
 
           att_cmd.header.stamp = ros::Time::now();
           att_control_pub.publish(att_cmd);
         } else {
           ROS_ERROR("NMPC failed. Using backup controller");
-          trajectory_setpoint current_setpoint =
-              nmpc_controller->getCurrentSetpoint();
 
           double syaw = sin(current_yaw);
           double cyaw = cos(current_yaw);
@@ -417,8 +421,7 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           vel_cmd.velocity.y = y_kp * (syaw * d_px + cyaw * d_py) +
                                y_kv * (syaw * d_vx + cyaw * d_vy);
           vel_cmd.velocity.z = z_kp * d_pz + z_kv * d_vz;
-          vel_cmd.yaw_rate = o_pid->getControl(
-              current_setpoint.q_yaw - current_yaw, error_time);
+          vel_cmd.yaw_rate = yaw_rate;
 
           vel_cmd.header.stamp = ros::Time::now();
           vel_control_pub.publish(vel_cmd);
