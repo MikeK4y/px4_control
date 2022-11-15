@@ -285,7 +285,7 @@ void PX4Pilot::loadParameters() {
   weights.emplace_back(vel_w[2]);
   weights.emplace_back(att_w[0]);
   weights.emplace_back(att_w[1]);
-  weights.emplace_back(att_w[2]);
+  weights.emplace_back(1.0e-6);  // I should remove this state at some point
   weights.emplace_back(thrust_cmd_w);
   weights.emplace_back(roll_cmd_w);
   weights.emplace_back(pitch_cmd_w);
@@ -382,14 +382,17 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
         {  // Lock state mutex
           std::lock_guard<std::mutex> state_guard(*(drone_state_mutex));
           current_yaw = drone_state.q_yaw;
-          yaw_rate = o_pid->getControl(current_setpoint.q_yaw - current_yaw,
-                                       error_time);
+          double yaw_error = current_setpoint.q_yaw - current_yaw;
+          yaw_error = yaw_error > M_PI_2 ? yaw_error - 2 * M_PI : yaw_error;
+          yaw_error = yaw_error < -M_PI_2 ? yaw_error + 2 * M_PI : yaw_error;
+
+          yaw_rate = o_pid->getControl(yaw_error, error_time);
           nmpc_controller->setCurrentState(drone_state, disturbances, yaw_rate);
         }
 
         // Send controller commands
         std::vector<double> ctrl;
-        ctrl.reserve(4);
+        ctrl.reserve(3);
         if (nmpc_controller->getCommands(ctrl)) {
           tf2::Quaternion q;
           q.setRPY(ctrl[1], ctrl[2], current_yaw);
