@@ -284,19 +284,6 @@ void PX4Pilot::loadParameters() {
   input_lower_bound = loadVectorParameter(nh_pvt, "lbu", default_gains);
   input_upper_bound = loadVectorParameter(nh_pvt, "ubu", default_gains);
 
-  std::vector<double> default_gains{0.0, 0.0};
-  std::vector<double> gains;
-  gains = loadVectorParameter(nh_pvt, "x_gain", default_gains);
-  x_kp = gains[0];
-  x_kv = gains[1];
-  gains = loadVectorParameter(nh_pvt, "y_gain", default_gains);
-  y_kp = gains[0];
-  y_kv = gains[1];
-  gains = loadVectorParameter(nh_pvt, "z_gain", default_gains);
-  z_kp = gains[0];
-  z_kv = gains[1];
-  o_pid_k = loadVectorParameter(nh_pvt, "o_pid", vector_parameter);
-
   // Cost function weights
   weights.clear();
   weights.emplace_back(pos_w[0]);
