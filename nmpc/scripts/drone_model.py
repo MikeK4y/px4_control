@@ -24,11 +24,10 @@ def drone_model():
                 qx, qy, qz)
 
     # Input
-    u1 = SX.sym('u1')  # Yaw rate
-    u2 = SX.sym('u2')  # Pitch
-    u3 = SX.sym('u3')  # Roll
-    u4 = SX.sym('u4')  # Thrust
-    u = vertcat(u1, u2, u3, u4)
+    u1 = SX.sym('u1')  # Thrust
+    u2 = SX.sym('u2')  # Roll
+    u3 = SX.sym('u3')  # Pitch
+    u = vertcat(u1, u2, u3)
 
     # Model parameters
     tp = SX.sym('tp')    # Roll time constant
@@ -43,11 +42,12 @@ def drone_model():
     fdz = SX.sym('fdz')  # Disturbance force z
     kth = SX.sym('kth')  # Thrust coefficients
     g = SX.sym('g')      # Gravity
+    yr = SX.sym('yr')    # Yaw rate
     p = vertcat(tp, kp,
                 tr, kr,
                 dx, dy, dz,
                 fdx, fdy, fdz,
-                kth, g)
+                kth, g, yr)
 
     # F_impl
     px_dot = SX.sym('px_dot')
@@ -67,12 +67,12 @@ def drone_model():
     dpx = vx
     dpy = vy
     dpz = vz
-    dvx = dx * vx + (cos(qz)*sin(qy)*cos(qx) + sin(qz)*sin(qx)) * kth * u4 + fdx
-    dvy = dy * vy + (sin(qz)*sin(qy)*cos(qx) - cos(qz)*sin(qx)) * kth * u4 + fdy
-    dvz = dz * vz + (cos(qy)*cos(qx)) * kth * u4 + g + fdz
-    dqx = (kr * u3 - qx) / tr
-    dqy = (kp * u2 - qy) / tp
-    dqz = u1
+    dvx = dx * vx + (cos(qz)*sin(qy)*cos(qx) + sin(qz)*sin(qx)) * kth * u1 + fdx
+    dvy = dy * vy + (sin(qz)*sin(qy)*cos(qx) - cos(qz)*sin(qx)) * kth * u1 + fdy
+    dvz = dz * vz + (cos(qy)*cos(qx)) * kth * u1 + g + fdz
+    dqx = (kr * u2 - qx) / tr
+    dqy = (kp * u3 - qy) / tp
+    dqz = yr
 
     f_expl = vertcat(dpx, dpy, dpz,
                      dvx, dvy, dvz,

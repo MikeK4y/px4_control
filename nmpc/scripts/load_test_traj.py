@@ -11,7 +11,6 @@ control_rate = 20.0
 radius = 1.0
 start_alt = 1.0
 final_alt = 2.0
-max_yaw = 0.75 * math.pi
 
 steps = int(t_traj * control_rate)
 
@@ -37,7 +36,7 @@ for i in range(steps):
 
     setpoint.orientation.x = 0.0
     setpoint.orientation.y = 0.0
-    setpoint.orientation.z = stheta * max_yaw
+    setpoint.orientation.z = theta_i
 
     trajectory.trajectory.append(setpoint)
 

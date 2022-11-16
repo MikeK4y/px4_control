@@ -22,22 +22,21 @@ fprintf(fileID, '\n');
 
 fprintf(fileID, '# NMPC cost function weights\n');
 fprintf(fileID, '# pos_w, vel_x -> [x, y, z]\n');
-fprintf(fileID, '# att_w -> [roll, pitch, yaw]\n');
+fprintf(fileID, '# att_w -> [roll, pitch]\n');
 fprintf(fileID, 'pos_w: [20, 20, 20]\n');
 fprintf(fileID, 'vel_w: [5, 5, 5]\n');
 fprintf(fileID, 'att_w: [1, 1, 1]\n');
 fprintf(fileID, '\n');
 
-fprintf(fileID, 'yaw_rate_cmd_w: 100\n');
-fprintf(fileID, 'pitch_cmd_w: 250\n');
-fprintf(fileID, 'roll_cmd_w: 250\n');
 fprintf(fileID, 'thrust_cmd_w: 500\n');
+fprintf(fileID, 'roll_cmd_w: 250\n');
+fprintf(fileID, 'pitch_cmd_w: 250\n');
 fprintf(fileID, '\n');
 
 fprintf(fileID, '# NMPC input constraints\n');
-fprintf(fileID, '# bound -> [yaw_cmd, pitch_cmd, roll_cmd, thrust]\n');
-fprintf(fileID, 'lbu: [-0.5, -0.2, -0.2, 0.1]\n');
-fprintf(fileID, 'ubu: [ 0.5,  0.2,  0.2, 1.0]\n');
+fprintf(fileID, '# bound -> [thrust, roll_cmd, pitch_cmd]\n');
+fprintf(fileID, 'lbu: [0.1, -0.2, -0.2]\n');
+fprintf(fileID, 'ubu: [1.0,  0.2,  0.2]\n');
 fprintf(fileID, '\n');
 
 fprintf(fileID, '# Backup velocity controller weights\n');
@@ -58,6 +57,7 @@ fprintf(fileID, '\n');
 fprintf(fileID, 'offboard_channel: \n');
 fprintf(fileID, 'offboard_on: \n');
 fprintf(fileID, 'offboard_off: \n');
+fprintf(fileID, '\n');
 
 fclose(fileID);
 end
