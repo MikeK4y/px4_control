@@ -15,20 +15,19 @@ gravity: -9.8066
 
 # NMPC cost function weights
 # pos_w, vel_x -> [x, y, z]
-# att_w -> [roll, pitch, yaw]
+# att_w -> [roll, pitch]
 pos_w: [21, 21, 17]
 vel_w: [15, 15, 13]
-att_w: [1, 1, 5]
+att_w: [1, 1]
 
-yaw_rate_cmd_w: 70
-pitch_cmd_w: 250
-roll_cmd_w: 250
 thrust_cmd_w: 750
+roll_cmd_w: 250
+pitch_cmd_w: 250
 
 # NMPC input constraints
-# bound -> [yaw_cmd, pitch_cmd, roll_cmd, thrust]
-lbu: [-0.15, -0.1, -0.1, 0.27]
-ubu: [ 0.15,  0.1,  0.1, 0.33]
+# bound -> [thrust, roll_cmd, pitch_cmd]
+lbu: [0.27, -0.1, -0.1]
+ubu: [0.33,  0.1,  0.1]
 
 # Backup velocity controller weights
 # gain -> [position error gain, velocity error gain]
