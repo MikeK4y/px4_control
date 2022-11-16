@@ -36,9 +36,11 @@ class MarkerSensor : public BaseSensor {
   Eigen::MatrixXd getCurrentR() const { return R_mat_cur; }
 
  private:
-  static const int measurement_size = 7;
-  static const int state_size = 23;
-  static const int error_state_size = 21;
+  enum sensor_sizes : unsigned int {
+    measurement_size = 7,
+    error_state_size = 21,
+    state_size = 23
+  };
 
   /**
    * @brief Calculates the H matrix using the predicted state

@@ -3,7 +3,7 @@ from drone_model import drone_model
 import numpy as np
 
 
-def acados_settings(Tf, N, generate_code=False):
+def acados_settings(Tf, N):
     """
       Set's up the acados Optimal Control Problem and Solver
 
@@ -67,30 +67,15 @@ def acados_settings(Tf, N, generate_code=False):
     pitch_max = 0.2*np.pi
     roll_min = -0.2*np.pi
     roll_max = 0.2*np.pi
-    yaw_min = -np.pi
-    yaw_max = np.pi
 
-    ocp.constraints.idxbx = np.array([6, 7, 8])
-    ocp.constraints.lbx = np.array(
-        [roll_min, pitch_min, yaw_min])
-    ocp.constraints.ubx = np.array(
-        [roll_max, pitch_max, yaw_max])
+    ocp.constraints.idxbx = np.array([6, 7])
+    ocp.constraints.lbx = np.array([roll_min, pitch_min])
+    ocp.constraints.ubx = np.array([roll_max, pitch_max])
 
     # Input constraints
-    yaw_rate_min = -0.05*np.pi
-    yaw_rate_max = 0.05*np.pi
-    pitch_cmd_min = -0.03*np.pi
-    pitch_cmd_max = 0.03*np.pi
-    roll_cmd_min = -0.03*np.pi
-    roll_cmd_max = 0.03*np.pi
-    thrust_min = 0.24
-    thrust_max = 0.32
-
-    ocp.constraints.idxbu = np.array([0, 1, 2, 3])
-    ocp.constraints.lbu = np.array(
-        [yaw_rate_min, pitch_cmd_min, roll_cmd_min, thrust_min])
-    ocp.constraints.ubu = np.array(
-        [yaw_rate_max, pitch_cmd_max, roll_cmd_max, thrust_max])
+    ocp.constraints.idxbu = np.array([0, 1, 2])
+    ocp.constraints.lbu = np.zeros(nu)
+    ocp.constraints.ubu = np.zeros(nu)
 
     # Initial state
     ocp.constraints.x0 = np.zeros(nx)
@@ -108,12 +93,6 @@ def acados_settings(Tf, N, generate_code=False):
     ocp.solver_options.nlp_solver_type = 'SQP'
     ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
     ocp.solver_options.integrator_type = 'ERK'
-    # ocp.solver_options.nlp_solver_max_iter = 1000
-
-    # Path to acados include and lib directories
-    # Uncomment if you want to build generated c code
-    # ocp.acados_include_path = '../../acados/include'
-    # ocp.acados_lib_path = '../../acados/lib'
 
     acados_solver = AcadosOcpSolver(ocp)
 
@@ -123,5 +102,5 @@ def acados_settings(Tf, N, generate_code=False):
 if __name__ == "__main__":
     T = 3  # sec
     control_rate = 20  # Hz
-    acados_settings(T, T*control_rate, generate_code=True)
+    acados_settings(T, T*control_rate)
     print("Acados NMPC generated")

@@ -40,11 +40,20 @@ class AcadosNMPC {
   ~AcadosNMPC();
 
   /**
+   * @brief Returns size of weight vector
+   */
+  unsigned int getWeightsSize() const { return DRONE_W_DISTURBANCES_NY; }
+
+  /**
    * @brief Initializes controller and sets the model parameters
    * @param model_params The model parameters
+   * @param input_lower_bound The command lower bound constraint
+   * @param input_upper_bound The command upper bound constraint
    * @returns True if successful
    */
-  bool initializeController(const model_parameters &model_params);
+  bool initializeController(const model_parameters &model_params,
+                            const std::vector<double> &input_lower_bound,
+                            const std::vector<double> &input_upper_bound);
 
   /**
    * @brief Sets the weighing matrix for the cost function
@@ -62,16 +71,12 @@ class AcadosNMPC {
   void setTrajectory(const std::vector<trajectory_setpoint> &trajectory);
 
   /**
-   * @brief Generates a trajectory from an initial and goal point using the nmpc
-   * @param trajectory The reference trajectory vector
-   * @param start_point The trajectory's starting point
-   * @param goal_point The trajectory's goal point
-   * @returns True if successful
+   * @brief Returns the current setpoint
+   * @returns current trajectory setpoint
    */
-  bool getTrajectory(std::vector<trajectory_setpoint> &trajectory,
-                     const trajectory_setpoint &start_point,
-                     const trajectory_setpoint &goal_point,
-                     const std::vector<double> &disturbances);
+  trajectory_setpoint getCurrentSetpoint() const {
+    return current_reference_trajectory[trajectory_index];
+  }
 
   /**
    * @brief Returns the current setpoint
@@ -86,9 +91,18 @@ class AcadosNMPC {
    * @param state Current UAS state
    * @param disturbances Current estimation of external disturbances. Expects a
    * vector with three elements: {Fx, Fy, Fz}
+   * @param yaw_rate Yaw rate
    */
   void setCurrentState(const trajectory_setpoint &state,
-                       const std::vector<double> &disturbances);
+                       const std::vector<double> &disturbances,
+                       const double &yaw_rate);
+
+  /**
+   * @brief Sets the reference trajectory. If the reference trajectory's size is
+   * smaller than the discretization steps, the last value is repeated until all
+   * steps are filled
+   */
+  void updateReference();
 
   /**
    * @brief If the NMPC problem is successfully solved, it updates the control
@@ -127,25 +141,19 @@ class AcadosNMPC {
 #endif
 
   /**
-   * @brief Sets the reference trajectory. If the reference trajectory's size is
-   * smaller than the discretization steps, the last value is repeated until all
-   * steps are filled
-   */
-  void updateReference();
-
-  /**
    * @brief Sets the initial conditions for acados
    * @param state_init Initial state of the drone contained in a setpoint struct
    */
   void updateInitialConditions(const trajectory_setpoint &state_init);
 
   /**
-   * @brief Updates the disturbances
+   * @brief Updates the model parameters. Disturbances and yaw rate
    * @param fdis_x Disturbance on x axis
    * @param fdis_y Disturbance on y axis
    * @param fdis_z Disturbance on z axis
+   * @param yaw_rate Yaw rate
    */
-  void updateDisturbances(const double &fdis_x, const double &fdis_y,
-                          const double &fdis_z);
+  void updateParameters(const double &fdis_x, const double &fdis_y,
+                        const double &fdis_z, const double &yaw_rate);
 };
 }  // namespace px4_ctrl

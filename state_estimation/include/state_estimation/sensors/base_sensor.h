@@ -30,7 +30,7 @@ class BaseSensor {
    */
   virtual void correctionData(const eskf_state &state_pred,
                               Eigen::MatrixXd &H_mat,
-                              Eigen::MatrixXd &y_expected) {}
+                              Eigen::MatrixXd &y_expected) = 0;
 
   /**
    * @brief Use Covariance Matching (Mehra 1972) to update the sensor covariance
