@@ -1,14 +1,14 @@
 # Attitude Dynamics
-t_roll: 0.14115
-k_roll: 0.99386
-t_pitch: 0.14199
-k_pitch: 1.00199
+t_roll: 0.13875
+k_roll: 0.97767
+t_pitch: 0.13951
+k_pitch: 0.96001
 
 # Damping coefficients
-damping_coef: [-0.26057, -0.26057, 0.00000]
+damping_coef: [-0.12604, -0.12604, 0.00000]
 
 # Thrust coefficient
-k_thrust: 28.54209
+k_thrust: 29.13360
 
 # Gravity on world frame
 gravity: -9.8066
@@ -16,18 +16,18 @@ gravity: -9.8066
 # NMPC cost function weights
 # pos_w, vel_x -> [x, y, z]
 # att_w -> [roll, pitch]
-pos_w: [25, 25, 17]
+pos_w: [25, 25, 21]
 vel_w: [11, 11, 11]
 att_w: [1, 1]
 
-thrust_cmd_w: 750
-roll_cmd_w: 135
-pitch_cmd_w: 135
+thrust_cmd_w: 900
+roll_cmd_w: 150
+pitch_cmd_w: 150
 
 # NMPC input constraints
-# bound -> [yaw_cmd, pitch_cmd, roll_cmd, thrust]
-lbu: [0.31, -0.1, -0.1]
-ubu: [0.38,  0.1,  0.1]
+# bound -> [thrust, roll_cmd, pitch_cmd]
+lbu: [0.15, -0.25, -0.25]
+ubu: [0.65,  0.25,  0.25]
 
 # Backup velocity controller weights
 # gain -> [position error gain, velocity error gain]
@@ -35,7 +35,7 @@ ubu: [0.38,  0.1,  0.1]
 x_gain: [0.95, 0.65]
 y_gain: [0.95, 0.65]
 z_gain: [0.6, 0.45]
-o_pid: [0.3, 0.0, 0.4]
+o_pid: [0.5, 0.0, 0.4]
 
 # RC Switches
 auto_channel: 4
