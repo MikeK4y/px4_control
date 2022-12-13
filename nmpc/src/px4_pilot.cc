@@ -403,8 +403,8 @@ void PX4Pilot::commandPublisher(const double &pub_rate) {
           std::lock_guard<std::mutex> state_guard(*(drone_state_mutex));
           current_yaw = drone_state.q_yaw;
           double yaw_error = current_setpoint.q_yaw - current_yaw;
-          yaw_error = yaw_error > M_PI_2 ? yaw_error - 2 * M_PI : yaw_error;
-          yaw_error = yaw_error < -M_PI_2 ? yaw_error + 2 * M_PI : yaw_error;
+          while (yaw_error > M_PI_2) yaw_error -= 2 * M_PI;
+          while (yaw_error < -M_PI_2) yaw_error += 2 * M_PI;
 
           yaw_rate = o_pid->getControl(yaw_error, error_time);
           nmpc_controller->setCurrentState(drone_state, disturbances, yaw_rate);
