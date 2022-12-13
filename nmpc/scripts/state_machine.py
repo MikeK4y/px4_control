@@ -25,9 +25,9 @@ class StateMachineNode():
         rp.loginfo('NMPC is up')
 
         # Setpoint
-        self.H_marker_setpoint = np.array([[1.0, 0.0, 0.0, -4.2],
+        self.H_marker_setpoint = np.array([[1.0, 0.0, 0.0, -0.2],
                                            [0.0, 1.0, 0.0,  0.0],
-                                           [0.0, 0.0, 1.0,  0.2],
+                                           [0.0, 0.0, 1.0,  1.5],
                                            [0.0, 0.0, 0.0,  1.0]])
         self.marker_setpoint_sent = False
         self.marker_position = None
@@ -111,7 +111,7 @@ class StateMachineNode():
                 d_o = marker_current_orientation - self.marker_orientation
                 d_p = marker_current_pos - self.marker_position
 
-                if np.dot(d_p, d_p) > 0.02 or abs(d_o) > 0.075:
+                if np.dot(d_p, d_p) > 0.005 or abs(d_o) > 0.075:
                     rp.logwarn(
                         'The marker\'s position changed too much. Sending new setpoint')
                     self.traj.trajectory.clear()
